@@ -1,0 +1,830 @@
+#!/usr/bin/env python3
+import argparse
+import datetime
+import json
+import os
+import pathlib
+import re
+import sys
+import time
+import urllib.parse
+import urllib.request
+import urllib.error
+
+BL_SPACE = os.getenv('BL_SPACE')
+BL_PROJECT = os.getenv('BL_PROJECT')
+BL_API_KEY = os.getenv('BL_API_KEY')
+BL_REGISTRY = os.getenv('BL_REGISTRY', os.path.join(os.getenv('XDG_CONFIG_HOME', os.path.join(os.getenv('HOME'), '.config')), 'bl', 'registry.json'))
+
+CMD_NAME = 'bl'
+CMD_USAGE = '''
+usage: bl [<option(s)>] <command> [...]
+handle backlog service.
+
+commands:
+  bl create         # create backlog issue
+  bl update         # update backlog issue
+  bl resource sync  # sync backlog resources to caches
+  bl resource list  # list backlog resources from caches
+  bl completion     # print evaluatable completion script
+  bl help           # print usage and exit
+
+options:
+  -h, --help  print usage and exit
+
+environment-variables:
+  BL_SPACE     backlog space domain
+  BL_PROJECT   backlog project key
+  BL_API_KEY   backlog API key
+  BL_REGISTRY  registry path (default: ~/.config/bl/registry.json)
+'''.strip()
+SUBCMD_USAGE = {}
+SUBCMD_USAGE['create'] = '''
+usage: bl create [<option(s)>]
+create backlog issue.
+
+options:
+  -p, --project=PROJECT          create issue on PROJECT
+  -I, --parent-issue=ISSUE       issue parent issue
+  -s, --summary=SUMMARY          issue summary
+  -d, --description=DESCRIPTION  issue description
+  -S, --start-date=DATE          issue start date (default: today)
+  -D, --due-date=DATE            issue due date (default: today)
+  -t, --issue-type=ISSUE_TYPE    issue type
+  -c, --category=CATEGORY        issue category
+  -v, --version=VERSION          issue version
+  -m, --milestone=MILESTONE      issue milestone
+  -P, --priority=PRIORITY        issue priority (default: 中)
+  -h, --help                     print usage and exit
+'''.strip()
+SUBCMD_USAGE['update'] = '''
+usage: bl update [<option(s)>]
+update backlog issue.
+
+options:
+  -i, --issue=ISSUE              update ISSUE
+  -I, --parent-issue=ISSUE       issue parent issue
+  -s, --summary=SUMMARY          issue summary
+  -d, --description=DESCRIPTION  issue description
+  -S, --start-date=DATE          issue start date
+  -D, --due-date=DATE            issue due date
+  -t, --issue-type=ISSUE_TYPE    issue type
+  -c, --category=CATEGORY        issue category
+  -v, --version=VERSION          issue version
+  -m, --milestone=MILESTONE      issue milestone
+  -P, --priority=PRIORITY        issue priority
+  -T, --status=STATUS            issue status
+  -r, --resolution=RESOLUTION    issue resolution
+  -h, --help                     print usage and exit
+'''.strip()
+SUBCMD_USAGE['resource-sync'] = '''
+usage: bl resource sync [<option(s)>]
+sync backlog resources to caches.
+
+options:
+  -p, --project=PROJECT  sync resource caches of PROJECT
+  -h, --help             print usage and exit
+'''.strip()
+SUBCMD_USAGE['resource-list'] = '''
+usage: bl resource list [<option(s)>] <resource_type>
+list backlog resources from caches.
+
+options:
+  -p, --project=PROJECT  list resource caches of PROJECT
+  -h, --help             print usage and exit
+
+resource-types:
+  projects
+  issue_types
+  categories
+  versions
+  priorities
+'''.strip()
+SUBCMD_USAGE['completion'] = '''
+usage: bl completion [<option(s)>] <shell>
+print evaluatable completion script.
+
+options:
+  -h, --help  print usage and exit
+
+shells:
+  bash
+  fish
+'''.strip()
+SUBCMD_USAGE['help'] = '''
+usage: bl help [<option(s)>] [<command>]
+print usage and exit.
+
+options:
+  -h, --help  print usage and exit
+'''.strip()
+
+RESOURCE_TYPES = [
+    'projects',
+    'issue_types',
+    'categories',
+    'versions',
+    'priorities',
+    'statuses',
+    'resolutions',
+]
+VIRTUAL_RESOURCES = {}
+VIRTUAL_RESOURCES['priorities'] = {
+    '高': {'id': 2, 'order': 1},
+    '中': {'id': 3, 'order': 2},
+    '低': {'id': 4, 'order': 3},
+}
+VIRTUAL_RESOURCES['resolutions'] = {
+    '対応済み': {'id': 0, 'order': 1},
+    '対応しない': {'id': 1, 'order': 2},
+    '無効': {'id': 2, 'order': 3},
+    '重複': {'id': 3, 'order': 4},
+    '再現しない': {'id': 4, 'order': 5}
+}
+
+SHELL_COMPLETION_SCRIPTS = {}
+SHELL_COMPLETION_SCRIPTS['bash'] = '''
+_bl() {
+  local cur prev words cword split
+  _init_completion -s || return
+
+  local defaultIFS=$IFS
+  local IFS=$defaultIFS
+
+  local commands=(
+    create
+    update
+    resource
+    completion
+    help
+  )
+  local resource_commands=(
+    sync
+    list
+  )
+  local options=(
+    --help
+  )
+  local create_options=(
+    --project=
+    --parent-issue=
+    --summary=
+    --description=
+    --start-date=
+    --due-date=
+    --issue-type=
+    --category=
+    --version=
+    --milestone=
+    --priority=
+    --help
+  )
+  local update_options=(
+    --issue=
+    --parent-issue=
+    --summary=
+    --description=
+    --start-date=
+    --due-date=
+    --issue-type=
+    --category=
+    --version=
+    --milestone=
+    --priority=
+    --status=
+    --resolution=
+    --help
+  )
+  local resource_sync_options=(
+    --project=
+    --help
+  )
+  local resource_list_options=(
+    --project=
+    --help
+  )
+  local completion_options=(
+    --help
+  )
+  local help_options=(
+    --help
+  )
+  local resource_types=(
+    projects
+    issue_types
+    categories
+    versions
+    priorities
+    statuses
+    resolutions
+  )
+  local supported_shells=(
+    bash
+    fish
+  )
+
+  case $cword in
+    1)
+      $split && return
+      case $cur in
+        -*)
+          COMPREPLY=( $(compgen -W '"${options[@]}"' -- "$cur") )
+          ;;
+        *)
+          COMPREPLY=( $(compgen -W '"${commands[@]}"' -- "$cur") )
+          ;;
+      esac
+      ;;
+    *)
+      case ${words[1]} in
+        create)
+          case $prev in
+            -p|--project)
+              IFS=$'\\n'; COMPREPLY=( $(compgen -W '$(bl resource list projects)' -- "$cur") ); IFS=$defaultIFS
+              ;;
+            -t|--issue-type)
+              IFS=$'\\n'; COMPREPLY=( $(compgen -W '$(bl resource list issue_types)' -- "$cur") ); IFS=$defaultIFS
+              [[ ! $cur =~ ^[\\'\\"] ]] && COMPREPLY=( "${COMPREPLY[@]// /\\\\ }" )
+              ;;
+            -c|--category)
+              IFS=$'\\n'; COMPREPLY=( $(compgen -W '$(bl resource list categories)' -- "$cur") ); IFS=$defaultIFS
+              [[ ! $cur =~ ^[\\'\\"] ]] && COMPREPLY=( "${COMPREPLY[@]// /\\\\ }" )
+              ;;
+            -v|--version)
+              IFS=$'\\n'; COMPREPLY=( $(compgen -W '$(bl resource list versions)' -- "$cur") ); IFS=$defaultIFS
+              [[ ! $cur =~ ^[\\'\\"] ]] && COMPREPLY=( "${COMPREPLY[@]// /\\\\ }" )
+              ;;
+            -m|--milestone)
+              IFS=$'\\n'; COMPREPLY=( $(compgen -W '$(bl resource list versions)' -- "$cur") ); IFS=$defaultIFS
+              [[ ! $cur =~ ^[\\'\\"] ]] && COMPREPLY=( "${COMPREPLY[@]// /\\\\ }" )
+              ;;
+            -P|--priority)
+              IFS=$'\\n'; COMPREPLY=( $(compgen -W '$(bl resource list priorities)' -- "$cur") ); IFS=$defaultIFS
+              [[ ! $cur =~ ^[\\'\\"] ]] && COMPREPLY=( "${COMPREPLY[@]// /\\\\ }" )
+              ;;
+          esac
+          $split && return
+          COMPREPLY=( $(compgen -W '"${create_options[@]}"' -- "$cur") )
+          ;;
+        update)
+          case $prev in
+            -t|--issue-type)
+              IFS=$'\\n'; COMPREPLY=( $(compgen -W '$(bl resource list issue_types)' -- "$cur") ); IFS=$defaultIFS
+              [[ ! $cur =~ ^[\\'\\"] ]] && COMPREPLY=( "${COMPREPLY[@]// /\\\\ }" )
+              ;;
+            -c|--category)
+              IFS=$'\\n'; COMPREPLY=( $(compgen -W '$(bl resource list categories)' -- "$cur") ); IFS=$defaultIFS
+              [[ ! $cur =~ ^[\\'\\"] ]] && COMPREPLY=( "${COMPREPLY[@]// /\\\\ }" )
+              ;;
+            -v|--version)
+              IFS=$'\\n'; COMPREPLY=( $(compgen -W '$(bl resource list versions)' -- "$cur") ); IFS=$defaultIFS
+              [[ ! $cur =~ ^[\\'\\"] ]] && COMPREPLY=( "${COMPREPLY[@]// /\\\\ }" )
+              ;;
+            -m|--milestone)
+              IFS=$'\\n'; COMPREPLY=( $(compgen -W '$(bl resource list versions)' -- "$cur") ); IFS=$defaultIFS
+              [[ ! $cur =~ ^[\\'\\"] ]] && COMPREPLY=( "${COMPREPLY[@]// /\\\\ }" )
+              ;;
+            -P|--priority)
+              IFS=$'\\n'; COMPREPLY=( $(compgen -W '$(bl resource list priorities)' -- "$cur") ); IFS=$defaultIFS
+              [[ ! $cur =~ ^[\\'\\"] ]] && COMPREPLY=( "${COMPREPLY[@]// /\\\\ }" )
+              ;;
+            -T|--status)
+              IFS=$'\\n'; COMPREPLY=( $(compgen -W '$(bl resource list statuses)' -- "$cur") ); IFS=$defaultIFS
+              [[ ! $cur =~ ^[\\'\\"] ]] && COMPREPLY=( "${COMPREPLY[@]// /\\\\ }" )
+              ;;
+            -r|--resolution)
+              IFS=$'\\n'; COMPREPLY=( $(compgen -W '$(bl resource list resolutions)' -- "$cur") ); IFS=$defaultIFS
+              [[ ! $cur =~ ^[\\'\\"] ]] && COMPREPLY=( "${COMPREPLY[@]// /\\\\ }" )
+              ;;
+          esac
+          $split && return
+          COMPREPLY=( $(compgen -W '"${update_options[@]}"' -- "$cur") )
+          ;;
+        resource)
+          case $cword in
+            2)
+              $split && return
+              COMPREPLY=( $(compgen -W '"${resource_commands[@]}"' -- "$cur") )
+              ;;
+            *)
+              case ${words[2]} in
+                sync)
+                  case $prev in
+                    -p|--project)
+                      IFS=$'\\n'; COMPREPLY=( $(compgen -W '$(bl resource list projects)' -- "$cur") ); IFS=$defaultIFS
+                      ;;
+                  esac
+                  $split && return
+                  COMPREPLY=( $(compgen -W '"${resource_sync_options[@]}"' -- "$cur") )
+                  ;;
+                list)
+                  case $prev in
+                    -p|--project)
+                      IFS=$'\\n'; COMPREPLY=( $(compgen -W '$(bl resource list projects)' -- "$cur") ); IFS=$defaultIFS
+                      ;;
+                  esac
+                  $split && return
+                  case $cur in
+                    -*)
+                      COMPREPLY=( $(compgen -W '"${resource_list_options[@]}"' -- "$cur") )
+                      ;;
+                    *)
+                      COMPREPLY=( $(compgen -W '"${resource_types[@]}"' -- "$cur") )
+                      ;;
+                  esac
+                  ;;
+              esac
+              ;;
+          esac
+          ;;
+        completion)
+          $split && return
+          case $cur in
+            -*)
+              COMPREPLY=( $(compgen -W '"${completion_options[@]}"' -- "$cur") )
+              ;;
+            *)
+              COMPREPLY=( $(compgen -W '"${supported_shells[@]}"' -- "$cur") )
+              ;;
+          esac
+          ;;
+        help)
+          $split && return
+          case $cur in
+            -*)
+              COMPREPLY=( $(compgen -W '"${help_options[@]}"' -- "$cur") )
+              ;;
+            *)
+              case $cword in
+                2)
+                  COMPREPLY=( $(compgen -W '"${commands[@]}"' -- "$cur") )
+                  ;;
+                3)
+                  case ${words[2]} in
+                    resource)
+                      COMPREPLY=( $(compgen -W '"${resource_commands[@]}"' -- "$cur") )
+                      ;;
+                  esac
+                  ;;
+              esac
+              ;;
+          esac
+          ;;
+      esac
+      ;;
+  esac
+  [[ $COMPREPLY == *= ]] && compopt -o nospace
+}
+complete -F _bl bl
+'''.strip()
+SHELL_COMPLETION_SCRIPTS['fish'] = '''
+complete -c bl -x
+complete -c bl -n '__fish_no_arguments' -s h -l help -d 'print usage and exit'
+complete -c bl -n '__fish_use_subcommand' -xa create -d 'create backlog issue'
+complete -c bl -n '__fish_seen_subcommand_from create' -s p -l project -xa '(bl resource list projects)' -d 'create issue on PROJECT'
+complete -c bl -n '__fish_seen_subcommand_from create' -s I -l parent-issue -d 'issue parent issue'
+complete -c bl -n '__fish_seen_subcommand_from create' -s s -l summary -d 'issue summary'
+complete -c bl -n '__fish_seen_subcommand_from create' -s d -l description -d 'issue description'
+complete -c bl -n '__fish_seen_subcommand_from create' -s S -l start-date -d 'issue start date'
+complete -c bl -n '__fish_seen_subcommand_from create' -s D -l due-date -d 'issue due date'
+complete -c bl -n '__fish_seen_subcommand_from create' -s t -l issue-type -xa '(bl resource list issue_types)' -d 'issue type'
+complete -c bl -n '__fish_seen_subcommand_from create' -s c -l category -xa '(bl resource list categories)' -d 'issue category'
+complete -c bl -n '__fish_seen_subcommand_from create' -s v -l version -xa '(bl resource list versions)' -d 'issue version'
+complete -c bl -n '__fish_seen_subcommand_from create' -s m -l milestone -xa '(bl resource list versions)' -d 'issue milestone'
+complete -c bl -n '__fish_seen_subcommand_from create' -s P -l priority -xa '(bl resource list priorities)' -d 'issue priority'
+complete -c bl -n '__fish_seen_subcommand_from create' -s h -l help -d 'print usage and exit'
+complete -c bl -n '__fish_use_subcommand' -xa update -d 'update backlog issue'
+complete -c bl -n '__fish_seen_subcommand_from update' -s i -l issue -d 'update ISSUE'
+complete -c bl -n '__fish_seen_subcommand_from update' -s I -l parent-issue -d 'issue parent issue'
+complete -c bl -n '__fish_seen_subcommand_from update' -s s -l summary -d 'issue summary'
+complete -c bl -n '__fish_seen_subcommand_from update' -s d -l description -d 'issue description'
+complete -c bl -n '__fish_seen_subcommand_from update' -s S -l start-date -d 'issue start date'
+complete -c bl -n '__fish_seen_subcommand_from update' -s D -l due-date -d 'issue due date'
+complete -c bl -n '__fish_seen_subcommand_from update' -s t -l issue-type -xa '(bl resource list issue_types)' -d 'issue type'
+complete -c bl -n '__fish_seen_subcommand_from update' -s c -l category -xa '(bl resource list categories)' -d 'issue category'
+complete -c bl -n '__fish_seen_subcommand_from update' -s v -l version -xa '(bl resource list versions)' -d 'issue version'
+complete -c bl -n '__fish_seen_subcommand_from update' -s m -l milestone -xa '(bl resource list versions)' -d 'issue milestone'
+complete -c bl -n '__fish_seen_subcommand_from update' -s P -l priority -xa '(bl resource list priorities)' -d 'issue priority'
+complete -c bl -n '__fish_seen_subcommand_from update' -s T -l status -xa '(bl resource list statuses)' -d 'issue status'
+complete -c bl -n '__fish_seen_subcommand_from update' -s r -l resolution -xa '(bl resource list resolutions)' -d 'issue resolution'
+complete -c bl -n '__fish_seen_subcommand_from update' -s h -l help -d 'print usage and exit'
+complete -c bl -n '__fish_use_subcommand' -xa resource -d 'manage backlog resources'
+complete -c bl -n '__fish_seen_subcommand_from resource; and not __fish_seen_subcommand_from sync list' -xa sync -d 'sync backlog resources to caches'
+complete -c bl -n '__fish_seen_subcommand_from resource; and __fish_seen_subcommand_from sync' -s p -l project -xa '(bl resource list projects)' -d 'create issue on PROJECT'
+complete -c bl -n '__fish_seen_subcommand_from resource; and __fish_seen_subcommand_from sync' -s h -l help -d 'print usage and exit'
+complete -c bl -n '__fish_seen_subcommand_from resource; and not __fish_seen_subcommand_from sync list' -xa list -d 'list backlog resources from caches'
+complete -c bl -n '__fish_seen_subcommand_from resource; and __fish_seen_subcommand_from list' -s p -l project -xa '(bl resource list projects)' -d 'create issue on PROJECT'
+complete -c bl -n '__fish_seen_subcommand_from resource; and __fish_seen_subcommand_from list' -s h -l help -d 'print usage and exit'
+complete -c bl -n '__fish_seen_subcommand_from resource; and __fish_seen_subcommand_from list' -xa 'projects issue_types categories versions priorities statuses resolutions' -d 'resource_type'
+complete -c bl -n '__fish_use_subcommand' -xa completion -d 'print evaluatable completion script'
+complete -c bl -n '__fish_seen_subcommand_from completion' -s h -l help -d 'print usage and exit'
+complete -c bl -n '__fish_seen_subcommand_from completion' -xa 'bash fish' -d 'shell'
+complete -c bl -n '__fish_use_subcommand' -xa help -d 'print usage and exit'
+complete -c bl -n '__fish_seen_subcommand_from help; and not __fish_seen_subcommand_from resource' -s h -l help -d 'print usage and exit'
+complete -c bl -n '__fish_seen_subcommand_from help; and not __fish_seen_subcommand_from resource' -xa new -d 'create backlog issue'
+complete -c bl -n '__fish_seen_subcommand_from help; and not __fish_seen_subcommand_from resource' -xa resource -d 'manage backlog resources'
+complete -c bl -n '__fish_seen_subcommand_from help; and __fish_seen_subcommand_from resource' -xa sync -d 'sync backlog resources to caches'
+complete -c bl -n '__fish_seen_subcommand_from help; and __fish_seen_subcommand_from resource' -xa list -d 'list backlog resources from caches'
+complete -c bl -n '__fish_seen_subcommand_from help; and not __fish_seen_subcommand_from resource' -xa completion -d 'print evaluatable completion script'
+complete -c bl -n '__fish_seen_subcommand_from help; and not __fish_seen_subcommand_from resource' -xa help -d 'print usage and exit'
+'''.strip()
+
+
+def warn(e):
+    print(f'{CMD_NAME}: {e}', file=sys.stderr)
+
+
+def get_item_recursive(d, keys, default_value=None):
+    cur = d
+    for key in keys:
+        if key not in cur:
+            return default_value
+        cur = cur[key]
+    return cur
+
+
+def set_item_recursive(d, keys, value):
+    cur = d
+    for key in keys[:-1]:
+        if key not in cur:
+            cur[key] = {}
+        cur = cur[key]
+    cur[keys[-1]] = value
+
+
+def set_default_item_recursive(d, keys, value):
+    cur = d
+    for key in keys[:-1]:
+        if key not in cur:
+            cur[key] = {}
+        cur = cur[key]
+    if keys[-1] not in cur:
+        cur[keys[-1]] = value
+
+
+def load_registry():
+    if BL_REGISTRY is None:
+        raise Exception('BL_REGISTRY is not set')
+    registry_path = pathlib.Path(BL_REGISTRY)
+    if registry_path.exists():
+        return json.loads(registry_path.read_text())
+    else:
+        return {'version': '1.0', 'defaults': {}, 'caches': {}}
+
+
+def save_registry(registry):
+    if BL_REGISTRY is None:
+        raise Exception('BL_REGISTRY is not set')
+    registry_path = pathlib.Path(BL_REGISTRY)
+    registry_path.parent.mkdir(parents=True, exist_ok=True)
+    registry_path.write_text(json.dumps(registry, ensure_ascii=False, indent=4) + '\n')
+
+
+def get_project_default(registry, project, param):
+    return get_item_recursive(registry, ['defaults', 'spaces', BL_SPACE, 'projects', project, param])
+
+
+def request_get_backlog_resources(api_path):
+    if BL_SPACE is None:
+        raise Exception('BL_SPACE is not set')
+    if BL_API_KEY is None:
+        raise Exception('BL_API_KEY is not set')
+    req = urllib.request.Request(f'https://{BL_SPACE}{api_path}?apiKey={BL_API_KEY}', method='GET')
+    time.sleep(1)
+    with urllib.request.urlopen(req) as res:
+        return json.loads(res.read().decode('utf-8'))
+
+
+def request_post_backlog_resources(api_path, method='POST', params={}):
+    if BL_SPACE is None:
+        raise Exception('BL_SPACE is not set')
+    if BL_API_KEY is None:
+        raise Exception('BL_API_KEY is not set')
+    headers = {'Content-Type': 'application/x-www-form-urlencoded'}
+    data = urllib.parse.urlencode(params).encode('utf-8')
+    req = urllib.request.Request(f'https://{BL_SPACE}{api_path}?apiKey={BL_API_KEY}', method=method, headers=headers, data=data)
+    time.sleep(1)
+    with urllib.request.urlopen(req) as res:
+        return json.loads(res.read().decode('utf-8'))
+
+
+def do_create(args):
+    if BL_SPACE is None:
+        warn('new: BL_SPACE is not set')
+        return 1
+    if BL_API_KEY is None:
+        warn('new: BL_API_KEY is not set')
+        return 1
+
+    today = datetime.datetime.today()
+    project = args.project or BL_PROJECT
+    if project is None:
+        warn('new: no input project')
+        return 1
+
+    registry = load_registry()
+    parent_issue = args.parent_issue or get_item_recursive(registry, ['defaults', 'spaces', BL_SPACE, 'projects', project, 'parent_issue'])
+    summary = args.summary
+    description = args.description
+    start_date = args.start_date or today.strftime('%Y-%m-%d')
+    due_date = args.due_date or today.strftime(('%Y-%m-%d'))
+    issue_type = args.issue_type or get_item_recursive(registry, ['defaults', 'spaces', BL_SPACE, 'projects', project, 'issue_type'])
+    category = args.category or get_item_recursive(registry, ['defaults', 'spaces', BL_SPACE, 'projects', project, 'category'])
+    version = args.version or get_item_recursive(registry, ['defaults', 'spaces', BL_SPACE, 'projects', project, 'version'])
+    milestone = args.milestone or get_item_recursive(registry, ['defaults', 'spaces', BL_SPACE, 'projects', project, 'milestone'])
+    priority = args.priority or get_item_recursive(registry, ['defaults', 'spaces', BL_SPACE, 'projects', project, 'priority']) or '中'
+    if summary is None or summary == '':
+        warn('new: no input summary')
+        return 1
+    if issue_type is None or issue_type == '':
+        warn('new: no input issue type')
+        return 1
+    if priority is None or priority == '':
+        warn('new: no input priority')
+        return 1
+
+    params = {}
+    params['projectId'] = get_item_recursive(registry, ['caches', 'spaces', BL_SPACE, 'projects', project, 'id'], project)
+    if parent_issue is not None:
+        resource = request_get_backlog_resources(f'/api/v2/issues/{parent_issue}')
+        params['parentIssueId'] = resource['id']
+    params['summary'] = summary
+    params['description'] = description
+    params['startDate'] = start_date
+    params['dueDate'] = due_date
+    params['issueTypeId'] = get_item_recursive(registry, ['caches', 'spaces', BL_SPACE, 'projects', project, 'issue_types', issue_type, 'id'], issue_type)
+    params['categoryId[]'] = get_item_recursive(registry, ['caches', 'spaces', BL_SPACE, 'projects', project, 'categories', category, 'id'], category)
+    params['versionId[]'] = get_item_recursive(registry, ['caches', 'spaces', BL_SPACE, 'projects', project, 'versions', version, 'id'], version)
+    params['milestoneId[]'] = get_item_recursive(registry, ['caches', 'spaces', BL_SPACE, 'projects', project, 'versions', milestone, 'id'], milestone)
+    params['priorityId'] = get_item_recursive(VIRTUAL_RESOURCES, ['priorities', priority, 'id'], priority)
+    params['assigneeId'] = get_item_recursive(registry, ['caches', 'spaces', BL_SPACE, 'users', 'myself', 'id'])
+    params2 = {}
+    for param, value in params.items():
+        if value is not None:
+            params2[param] = value
+
+    resource = request_post_backlog_resources('/api/v2/issues', method='POST', params=params2)
+    print(f'{resource['issueKey']} {resource['summary']}')
+
+
+def do_update(args):
+    if BL_SPACE is None:
+        warn('update: BL_SPACE is not set')
+        return 1
+    if BL_API_KEY is None:
+        warn('update: BL_API_KEY is not set')
+        return 1
+
+    issue = args.issue
+    if issue is None:
+        warn('update: no input issue')
+        return 1
+    issue_match = re.match('([^-]+)-([^-]+)', issue)
+    if issue_match is None:
+        warn('update: issue format is invalid \'{issue}\'')
+        return 1
+
+    registry = load_registry()
+    project = issue_match.group(1)
+    parent_issue = args.parent_issue
+    summary = args.summary
+    description = args.description
+    start_date = args.start_date
+    due_date = args.due_date
+    issue_type = args.issue_type
+    category = args.category
+    version = args.version
+    milestone = args.milestone
+    priority = args.priority
+    status = args.status
+    resolution = args.resolution
+    if summary == "":
+        warn('update: summary cannot be unset')
+        return 1
+    if issue_type == "":
+        warn('update: issue type cannot be unset')
+        return 1
+    if priority == "":
+        warn('update: priority cannot be unset')
+        return 1
+    if status == "":
+        warn('update: status cannot be unset')
+        return 1
+
+    params = {}
+    if parent_issue == '':
+        params['parentIssueId'] = ''
+    elif parent_issue is not None:
+        resource = request_get_backlog_resources(f'/api/v2/issues/{parent_issue}')
+        params['parentIssueId'] = resource['id']
+    params['summary'] = summary
+    params['description'] = description
+    params['startDate'] = start_date
+    params['dueDate'] = due_date
+    params['issueTypeId'] = get_item_recursive(registry, ['caches', 'spaces', BL_SPACE, 'projects', project, 'issue_types', issue_type, 'id'], issue_type)
+    params['categoryId[]'] = get_item_recursive(registry, ['caches', 'spaces', BL_SPACE, 'projects', project, 'categories', category, 'id'], category)
+    params['versionId[]'] = get_item_recursive(registry, ['caches', 'spaces', BL_SPACE, 'projects', project, 'versions', version, 'id'], version)
+    params['milestoneId[]'] = get_item_recursive(registry, ['caches', 'spaces', BL_SPACE, 'projects', project, 'versions', milestone, 'id'], milestone)
+    params['priorityId'] = get_item_recursive(VIRTUAL_RESOURCES, ['priorities', priority, 'id'], priority)
+    params['statusId'] = get_item_recursive(registry, ['caches', 'spaces', BL_SPACE, 'projects', project, 'statuses', status, 'id'], status)
+    params['resolutionId'] = get_item_recursive(VIRTUAL_RESOURCES, ['resolutions', resolution, 'id'], resolution)
+    params2 = {}
+    for param, value in params.items():
+        if value is not None:
+            params2[param] = value
+
+    resource = request_post_backlog_resources(f'/api/v2/issues/{issue}', method='PATCH', params=params2)
+    print(f'{resource['issueKey']} {resource['summary']}')
+
+
+def do_resource_sync(args):
+    if BL_SPACE is None:
+        warn('resource: sync: BL_SPACE is not set')
+        return 1
+    if BL_API_KEY is None:
+        warn('resource: sync: BL_API_KEY is not set')
+        return 1
+
+    project = args.project or BL_PROJECT
+    if project is None:
+        warn('resource: sync: no input project')
+        return 1
+
+    registry = load_registry()
+    if get_item_recursive(registry, ['caches', 'spaces', BL_SPACE, 'users', 'myself', 'id']) is None:
+        resource = request_get_backlog_resources('/api/v2/users/myself')
+        set_item_recursive(registry, ['caches', 'spaces', BL_SPACE, 'users', 'myself', 'id'], resource['id'])
+    if get_item_recursive(registry, ['caches', 'spaces', BL_SPACE, 'projects', project, 'id']) is None:
+        resource = request_get_backlog_resources(f'/api/v2/projects/{project}')
+        set_item_recursive(registry, ['caches', 'spaces', BL_SPACE, 'projects', project, 'id'], resource['id'])
+
+    set_default_item_recursive(registry, ['defaults', 'spaces', BL_SPACE, 'projects', project, 'parent_issue'], None)
+    set_default_item_recursive(registry, ['defaults', 'spaces', BL_SPACE, 'projects', project, 'issue_type'], None)
+    set_default_item_recursive(registry, ['defaults', 'spaces', BL_SPACE, 'projects', project, 'category'], None)
+    set_default_item_recursive(registry, ['defaults', 'spaces', BL_SPACE, 'projects', project, 'version'], None)
+    set_default_item_recursive(registry, ['defaults', 'spaces', BL_SPACE, 'projects', project, 'milestone'], None)
+    set_default_item_recursive(registry, ['defaults', 'spaces', BL_SPACE, 'projects', project, 'priority'], '中')
+    set_item_recursive(registry, ['caches', 'spaces', BL_SPACE, 'projects', project, 'issue_types'], {})
+    set_item_recursive(registry, ['caches', 'spaces', BL_SPACE, 'projects', project, 'categories'], {})
+    set_item_recursive(registry, ['caches', 'spaces', BL_SPACE, 'projects', project, 'versions'], {})
+    for resource in request_get_backlog_resources(f'/api/v2/projects/{project}/issueTypes'):
+        set_item_recursive(registry, ['caches', 'spaces', BL_SPACE, 'projects', project, 'issue_types', resource['name']], {'id': resource['id'], 'order': resource['displayOrder']})
+    for resource in request_get_backlog_resources(f'/api/v2/projects/{project}/categories'):
+        set_item_recursive(registry, ['caches', 'spaces', BL_SPACE, 'projects', project, 'categories', resource['name']], {'id': resource['id'], 'order': resource['displayOrder']})
+    for resource in request_get_backlog_resources(f'/api/v2/projects/{project}/versions'):
+        set_item_recursive(registry, ['caches', 'spaces', BL_SPACE, 'projects', project, 'versions', resource['name']], {'id': resource['id'], 'order': resource['displayOrder']})
+    for resource in request_get_backlog_resources(f'/api/v2/projects/{project}/statuses'):
+        set_item_recursive(registry, ['caches', 'spaces', BL_SPACE, 'projects', project, 'statuses', resource['name']], {'id': resource['id'], 'order': resource['displayOrder']})
+
+    save_registry(registry)
+
+
+def do_resource_list(args):
+    resource_type = args.resource_type
+    if resource_type is None:
+        warn('resource: list: no input resource type')
+        return 1
+    if resource_type not in RESOURCE_TYPES:
+        warn(f'resource: list: unrecognized resource type \'{resource_type}\'')
+        return 1
+
+    resource_names = []
+    if resource_type in VIRTUAL_RESOURCES:
+        resource_names = VIRTUAL_RESOURCES[resource_type].keys()
+    elif resource_type == 'spaces':
+        registry = load_registry()
+        resource_names = get_item_recursive(registry, ['caches', 'spaces'], {}).keys()
+    elif resource_type == 'projects':
+        if BL_SPACE is None:
+            warn('resource: list: BL_SPACE is not set')
+            return 1
+        registry = load_registry()
+        resource_names = get_item_recursive(registry, ['caches', 'spaces', BL_SPACE, 'projects'], {}).keys()
+    else:
+        if BL_SPACE is None:
+            warn('resource: list: BL_SPACE is not set')
+            return 1
+        project = args.project or BL_PROJECT
+        if project is None:
+            warn('resource: list: no input project')
+            return 1
+        registry = load_registry()
+        resources = get_item_recursive(registry, ['caches', 'spaces', BL_SPACE, 'projects', project, resource_type], {})
+        resource_names = sorted(resources.keys(), key=lambda key: resources[key]['order'])
+
+    for resource_name in resource_names:
+        print(resource_name)
+    return 0
+
+
+def do_completion(args):
+    shell = args.shell
+    if shell is None:
+        warn('completion: no input shell')
+        return 1
+    if shell not in SHELL_COMPLETION_SCRIPTS:
+        warn(f'completion: unrecognized shell \'{shell}\'')
+        return 1
+
+    print(SHELL_COMPLETION_SCRIPTS[shell])
+    return 0
+
+
+def do_help(args):
+    command = '-'.join(args.help_command) if len(args.help_command) >= 1 else None
+    if command is not None and command not in SUBCMD_USAGE:
+        warn(f'help: unrecognized command \'{command}\'')
+        return 1
+
+    if command is None:
+        print(CMD_USAGE)
+    else:
+        print(SUBCMD_USAGE[command])
+    return 0
+
+
+def main():
+    parser = argparse.ArgumentParser(prog=CMD_NAME, allow_abbrev=False, add_help=False, exit_on_error=False)
+    parser.add_argument('-h', '--help', action='store_true', dest='root_help')
+    parser.set_defaults(handler=None, command=None, help=False)
+
+    subparsers = parser.add_subparsers()
+
+    subparser_create = subparsers.add_parser('create', allow_abbrev=False, add_help=False)
+    subparser_create.add_argument('-p', '--project', dest='project')
+    subparser_create.add_argument('-I', '--parent-issue', dest='parent_issue')
+    subparser_create.add_argument('-s', '--summary', dest='summary')
+    subparser_create.add_argument('-d', '--description', dest='description')
+    subparser_create.add_argument('-S', '--start-date', dest='start_date')
+    subparser_create.add_argument('-D', '--due-date', dest='due_date')
+    subparser_create.add_argument('-t', '--issue-type', dest='issue_type')
+    subparser_create.add_argument('-c', '--category', dest='category')
+    subparser_create.add_argument('-v', '--version', dest='version')
+    subparser_create.add_argument('-m', '--milestone', dest='milestone')
+    subparser_create.add_argument('-P', '--priority', dest='priority')
+    subparser_create.add_argument('-h', '--help', action='store_true', dest='help')
+    subparser_create.set_defaults(handler=do_create, command='create')
+
+    subparser_update = subparsers.add_parser('update', allow_abbrev=False, add_help=False)
+    subparser_update.add_argument('-i', '--issue', dest='issue')
+    subparser_update.add_argument('-I', '--parent-issue', dest='parent_issue')
+    subparser_update.add_argument('-s', '--summary', dest='summary')
+    subparser_update.add_argument('-d', '--description', dest='description')
+    subparser_update.add_argument('-S', '--start-date', dest='start_date')
+    subparser_update.add_argument('-D', '--due-date', dest='due_date')
+    subparser_update.add_argument('-t', '--issue-type', dest='issue_type')
+    subparser_update.add_argument('-c', '--category', dest='category')
+    subparser_update.add_argument('-v', '--version', dest='version')
+    subparser_update.add_argument('-m', '--milestone', dest='milestone')
+    subparser_update.add_argument('-P', '--priority', dest='priority')
+    subparser_update.add_argument('-T', '--status', dest='status')
+    subparser_update.add_argument('-r', '--resolution', dest='resolution')
+    subparser_update.add_argument('-h', '--help', action='store_true', dest='help')
+    subparser_update.set_defaults(handler=do_update, command='update')
+
+    subparser_resource = subparsers.add_parser('resource', allow_abbrev=False, add_help=False)
+    subparser_resources = subparser_resource.add_subparsers()
+
+    subparser_resource_sync = subparser_resources.add_parser('sync', allow_abbrev=False, add_help=False)
+    subparser_resource_sync.add_argument('-p', '--project', dest='project')
+    subparser_resource_sync.add_argument('-h', '--help', action='store_true', dest='help')
+    subparser_resource_sync.set_defaults(handler=do_resource_sync, command='resource-sync')
+
+    subparser_resource_list = subparser_resources.add_parser('list', allow_abbrev=False, add_help=False)
+    subparser_resource_list.add_argument('-p', '--project', dest='project')
+    subparser_resource_list.add_argument('-h', '--help', action='store_true', dest='help')
+    subparser_resource_list.add_argument('resource_type', choices=RESOURCE_TYPES, nargs='?')
+    subparser_resource_list.set_defaults(handler=do_resource_list, command='resource-list')
+
+    subparser_completion = subparsers.add_parser('completion', allow_abbrev=False, add_help=False)
+    subparser_completion.add_argument('-h', '--help', action='store_true', dest='help')
+    subparser_completion.add_argument('shell', nargs='?')
+    subparser_completion.set_defaults(handler=do_completion, command='completion')
+
+    subparser_help = subparsers.add_parser('help', allow_abbrev=False, add_help=False)
+    subparser_help.add_argument('-h', '--help', action='store_true', dest='help')
+    subparser_help.add_argument('help_command', nargs='*')
+    subparser_help.set_defaults(handler=do_help, command='help')
+
+    try:
+        args = parser.parse_args()
+        if args.root_help:
+            print(CMD_USAGE)
+            return sys.exit(0)
+        if args.help and args.command is not None:
+            print(SUBCMD_USAGE[args.command])
+            return sys.exit(0)
+
+        if args.command is None:
+            print(CMD_USAGE)
+            return sys.exit(1)
+
+        exitcode = args.handler(args)
+        return sys.exit(exitcode)
+    except argparse.ArgumentError as e:
+        warn(e)
+        return sys.exit(1)
+
+
+if __name__ == '__main__':
+    main()
