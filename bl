@@ -19,13 +19,13 @@ BL_REGISTRY = os.getenv('BL_REGISTRY', os.path.join(os.getenv('XDG_CONFIG_HOME',
 CMD_NAME = 'bl'
 CMD_USAGE = '''
 usage: bl [<option(s)>] <command> [...]
-handle backlog service.
+handle Backlog service.
 
 commands:
-  bl create         # create backlog issue
-  bl update         # update backlog issue
-  bl resource sync  # sync backlog resources to caches
-  bl resource list  # list backlog resources from caches
+  bl create         # create Backlog issue
+  bl update         # update Backlog issue
+  bl resource sync  # sync Backlog resources to caches
+  bl resource list  # list Backlog resources from caches
   bl completion     # print evaluatable completion script
   bl help           # print usage and exit
 
@@ -33,15 +33,15 @@ options:
   -h, --help  print usage and exit
 
 environment-variables:
-  BL_SPACE     backlog space domain
-  BL_PROJECT   backlog project key
-  BL_API_KEY   backlog API key
+  BL_SPACE     Backlog space domain
+  BL_PROJECT   Backlog project key
+  BL_API_KEY   Backlog API key
   BL_REGISTRY  registry path (default: ~/.config/bl/registry.json)
 '''.strip()
 SUBCMD_USAGE = {}
 SUBCMD_USAGE['create'] = '''
 usage: bl create [<option(s)>]
-create backlog issue.
+create Backlog issue.
 
 options:
   -p, --project=PROJECT          create issue on PROJECT
@@ -59,7 +59,7 @@ options:
 '''.strip()
 SUBCMD_USAGE['update'] = '''
 usage: bl update [<option(s)>]
-update backlog issue.
+update Backlog issue.
 
 options:
   -i, --issue=ISSUE              update ISSUE
@@ -79,7 +79,7 @@ options:
 '''.strip()
 SUBCMD_USAGE['resource-sync'] = '''
 usage: bl resource sync [<option(s)>]
-sync backlog resources to caches.
+sync Backlog resources to caches.
 
 options:
   -p, --project=PROJECT  sync resource caches of PROJECT
@@ -87,7 +87,7 @@ options:
 '''.strip()
 SUBCMD_USAGE['resource-list'] = '''
 usage: bl resource list [<option(s)>] <resource_type>
-list backlog resources from caches.
+list Backlog resources from caches.
 
 options:
   -p, --project=PROJECT  list resource caches of PROJECT
@@ -380,7 +380,7 @@ complete -F _bl bl
 SHELL_COMPLETION_SCRIPTS['fish'] = '''
 complete -c bl -x
 complete -c bl -n '__fish_no_arguments' -s h -l help -d 'print usage and exit'
-complete -c bl -n '__fish_use_subcommand' -xa create -d 'create backlog issue'
+complete -c bl -n '__fish_use_subcommand' -xa create -d 'create Backlog issue'
 complete -c bl -n '__fish_seen_subcommand_from create' -s p -l project -xa '(bl resource list projects)' -d 'create issue on PROJECT'
 complete -c bl -n '__fish_seen_subcommand_from create' -s I -l parent-issue -d 'issue parent issue'
 complete -c bl -n '__fish_seen_subcommand_from create' -s s -l summary -d 'issue summary'
@@ -393,7 +393,7 @@ complete -c bl -n '__fish_seen_subcommand_from create' -s v -l version -xa '(bl 
 complete -c bl -n '__fish_seen_subcommand_from create' -s m -l milestone -xa '(bl resource list versions)' -d 'issue milestone'
 complete -c bl -n '__fish_seen_subcommand_from create' -s P -l priority -xa '(bl resource list priorities)' -d 'issue priority'
 complete -c bl -n '__fish_seen_subcommand_from create' -s h -l help -d 'print usage and exit'
-complete -c bl -n '__fish_use_subcommand' -xa update -d 'update backlog issue'
+complete -c bl -n '__fish_use_subcommand' -xa update -d 'update Backlog issue'
 complete -c bl -n '__fish_seen_subcommand_from update' -s i -l issue -d 'update ISSUE'
 complete -c bl -n '__fish_seen_subcommand_from update' -s I -l parent-issue -d 'issue parent issue'
 complete -c bl -n '__fish_seen_subcommand_from update' -s s -l summary -d 'issue summary'
@@ -408,11 +408,11 @@ complete -c bl -n '__fish_seen_subcommand_from update' -s P -l priority -xa '(bl
 complete -c bl -n '__fish_seen_subcommand_from update' -s T -l status -xa '(bl resource list statuses)' -d 'issue status'
 complete -c bl -n '__fish_seen_subcommand_from update' -s r -l resolution -xa '(bl resource list resolutions)' -d 'issue resolution'
 complete -c bl -n '__fish_seen_subcommand_from update' -s h -l help -d 'print usage and exit'
-complete -c bl -n '__fish_use_subcommand' -xa resource -d 'manage backlog resources'
-complete -c bl -n '__fish_seen_subcommand_from resource; and not __fish_seen_subcommand_from sync list' -xa sync -d 'sync backlog resources to caches'
+complete -c bl -n '__fish_use_subcommand' -xa resource -d 'manage Backlog resources'
+complete -c bl -n '__fish_seen_subcommand_from resource; and not __fish_seen_subcommand_from sync list' -xa sync -d 'sync Backlog resources to caches'
 complete -c bl -n '__fish_seen_subcommand_from resource; and __fish_seen_subcommand_from sync' -s p -l project -xa '(bl resource list projects)' -d 'create issue on PROJECT'
 complete -c bl -n '__fish_seen_subcommand_from resource; and __fish_seen_subcommand_from sync' -s h -l help -d 'print usage and exit'
-complete -c bl -n '__fish_seen_subcommand_from resource; and not __fish_seen_subcommand_from sync list' -xa list -d 'list backlog resources from caches'
+complete -c bl -n '__fish_seen_subcommand_from resource; and not __fish_seen_subcommand_from sync list' -xa list -d 'list Backlog resources from caches'
 complete -c bl -n '__fish_seen_subcommand_from resource; and __fish_seen_subcommand_from list' -s p -l project -xa '(bl resource list projects)' -d 'create issue on PROJECT'
 complete -c bl -n '__fish_seen_subcommand_from resource; and __fish_seen_subcommand_from list' -s h -l help -d 'print usage and exit'
 complete -c bl -n '__fish_seen_subcommand_from resource; and __fish_seen_subcommand_from list' -xa 'projects issue_types categories versions priorities statuses resolutions' -d 'resource_type'
@@ -421,10 +421,10 @@ complete -c bl -n '__fish_seen_subcommand_from completion' -s h -l help -d 'prin
 complete -c bl -n '__fish_seen_subcommand_from completion' -xa 'bash fish' -d 'shell'
 complete -c bl -n '__fish_use_subcommand' -xa help -d 'print usage and exit'
 complete -c bl -n '__fish_seen_subcommand_from help; and not __fish_seen_subcommand_from resource' -s h -l help -d 'print usage and exit'
-complete -c bl -n '__fish_seen_subcommand_from help; and not __fish_seen_subcommand_from resource' -xa new -d 'create backlog issue'
-complete -c bl -n '__fish_seen_subcommand_from help; and not __fish_seen_subcommand_from resource' -xa resource -d 'manage backlog resources'
-complete -c bl -n '__fish_seen_subcommand_from help; and __fish_seen_subcommand_from resource' -xa sync -d 'sync backlog resources to caches'
-complete -c bl -n '__fish_seen_subcommand_from help; and __fish_seen_subcommand_from resource' -xa list -d 'list backlog resources from caches'
+complete -c bl -n '__fish_seen_subcommand_from help; and not __fish_seen_subcommand_from resource' -xa new -d 'create Backlog issue'
+complete -c bl -n '__fish_seen_subcommand_from help; and not __fish_seen_subcommand_from resource' -xa resource -d 'manage Backlog resources'
+complete -c bl -n '__fish_seen_subcommand_from help; and __fish_seen_subcommand_from resource' -xa sync -d 'sync Backlog resources to caches'
+complete -c bl -n '__fish_seen_subcommand_from help; and __fish_seen_subcommand_from resource' -xa list -d 'list Backlog resources from caches'
 complete -c bl -n '__fish_seen_subcommand_from help; and not __fish_seen_subcommand_from resource' -xa completion -d 'print evaluatable completion script'
 complete -c bl -n '__fish_seen_subcommand_from help; and not __fish_seen_subcommand_from resource' -xa help -d 'print usage and exit'
 '''.strip()
