@@ -5,6 +5,7 @@ import json
 import os
 import pathlib
 import re
+import subprocess
 import sys
 import time
 import urllib.parse
@@ -26,6 +27,7 @@ commands:
   bl update         # update Backlog issue
   bl resource sync  # sync Backlog resources to caches
   bl resource list  # list Backlog resources from caches
+  bl configure      # edit config
   bl completion     # print evaluatable completion script
   bl help           # print usage and exit
 
@@ -100,6 +102,13 @@ resource-types:
   versions
   priorities
 '''.strip()
+SUBCMD_USAGE['configure'] = '''
+usage: bl configure [<option(s)>]
+edit config.
+
+options:
+  -h, --help  print usage and exit
+'''.strip()
 SUBCMD_USAGE['completion'] = '''
 usage: bl completion [<option(s)>] <shell>
 print evaluatable completion script.
@@ -155,6 +164,7 @@ _bl() {
     create
     update
     resource
+    configure
     completion
     help
   )
@@ -201,6 +211,9 @@ _bl() {
   )
   local resource_list_options=(
     --project=
+    --help
+  )
+  local configure_options=(
     --help
   )
   local completion_options=(
@@ -337,6 +350,10 @@ _bl() {
               ;;
           esac
           ;;
+        configure)
+          $split && return
+          COMPREPLY=( $(compgen -W '"${configure_options[@]}"' -- "$cur") )
+          ;;
         completion)
           $split && return
           case $cur in
@@ -416,6 +433,8 @@ complete -c bl -n '__fish_seen_subcommand_from resource; and not __fish_seen_sub
 complete -c bl -n '__fish_seen_subcommand_from resource; and __fish_seen_subcommand_from list' -s p -l project -xa '(bl resource list projects)' -d 'create issue on PROJECT'
 complete -c bl -n '__fish_seen_subcommand_from resource; and __fish_seen_subcommand_from list' -s h -l help -d 'print usage and exit'
 complete -c bl -n '__fish_seen_subcommand_from resource; and __fish_seen_subcommand_from list' -xa 'projects issue_types categories versions priorities statuses resolutions' -d 'resource_type'
+complete -c bl -n '__fish_use_subcommand' -xa configure -d 'edit config'
+complete -c bl -n '__fish_seen_subcommand_from completion' -s h -l help -d 'print usage and exit'
 complete -c bl -n '__fish_use_subcommand' -xa completion -d 'print evaluatable completion script'
 complete -c bl -n '__fish_seen_subcommand_from completion' -s h -l help -d 'print usage and exit'
 complete -c bl -n '__fish_seen_subcommand_from completion' -xa 'bash fish' -d 'shell'
@@ -717,6 +736,16 @@ def do_resource_list(args):
     return 0
 
 
+def do_configure(args):
+    editor = os.getenv('EDITOR')
+    if editor is None:
+        warn('configure: EDITOR is not set')
+        return 1
+
+    subprocess.run(f'{editor} {BL_REGISTRY}', shell=True)
+    return 0
+
+
 def do_completion(args):
     shell = args.shell
     if shell is None:
@@ -800,6 +829,11 @@ def main():
     subparser_completion.add_argument('-h', '--help', action='store_true', dest='help')
     subparser_completion.add_argument('shell', nargs='?')
     subparser_completion.set_defaults(handler=do_completion, command='completion')
+
+    subparser_configure = subparsers.add_parser('configure', allow_abbrev=False, add_help=False)
+    subparser_configure.add_argument('-h', '--help', action='store_true', dest='help')
+    subparser_configure.add_argument('shell', nargs='?')
+    subparser_configure.set_defaults(handler=do_configure, command='configure')
 
     subparser_help = subparsers.add_parser('help', allow_abbrev=False, add_help=False)
     subparser_help.add_argument('-h', '--help', action='store_true', dest='help')
