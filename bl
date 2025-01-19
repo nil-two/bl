@@ -97,7 +97,7 @@ options:
 
 resource-types:
   projects
-  issue_types
+  issueTypes
   categories
   versions
   priorities
@@ -130,7 +130,7 @@ options:
 
 RESOURCE_TYPES = [
     'projects',
-    'issue_types',
+    'issueTypes',
     'categories',
     'versions',
     'priorities',
@@ -139,16 +139,16 @@ RESOURCE_TYPES = [
 ]
 VIRTUAL_RESOURCES = {}
 VIRTUAL_RESOURCES['priorities'] = {
-    '高': {'id': 2, 'order': 1},
-    '中': {'id': 3, 'order': 2},
-    '低': {'id': 4, 'order': 3},
+    '高': {'id': 2, 'displayOrder': 1},
+    '中': {'id': 3, 'displayOrder': 2},
+    '低': {'id': 4, 'displayOrder': 3},
 }
 VIRTUAL_RESOURCES['resolutions'] = {
-    '対応済み': {'id': 0, 'order': 1},
-    '対応しない': {'id': 1, 'order': 2},
-    '無効': {'id': 2, 'order': 3},
-    '重複': {'id': 3, 'order': 4},
-    '再現しない': {'id': 4, 'order': 5}
+    '対応済み': {'id': 0, 'displayOrder': 1},
+    '対応しない': {'id': 1, 'displayOrder': 2},
+    '無効': {'id': 2, 'displayOrder': 3},
+    '重複': {'id': 3, 'displayOrder': 4},
+    '再現しない': {'id': 4, 'displayOrder': 5}
 }
 
 SHELL_COMPLETION_SCRIPTS = {}
@@ -224,7 +224,7 @@ _bl() {
   )
   local resource_types=(
     projects
-    issue_types
+    issueTypes
     categories
     versions
     priorities
@@ -256,7 +256,7 @@ _bl() {
               IFS=$'\\n'; COMPREPLY=( $(compgen -W '$(bl resource list projects)' -- "$cur") ); IFS=$defaultIFS
               ;;
             -t|--issue-type)
-              IFS=$'\\n'; COMPREPLY=( $(compgen -W '$(bl resource list issue_types)' -- "$cur") ); IFS=$defaultIFS
+              IFS=$'\\n'; COMPREPLY=( $(compgen -W '$(bl resource list issueTypes)' -- "$cur") ); IFS=$defaultIFS
               [[ ! $cur =~ ^[\\'\\"] ]] && COMPREPLY=( "${COMPREPLY[@]// /\\\\ }" )
               ;;
             -c|--category)
@@ -282,7 +282,7 @@ _bl() {
         update)
           case $prev in
             -t|--issue-type)
-              IFS=$'\\n'; COMPREPLY=( $(compgen -W '$(bl resource list issue_types)' -- "$cur") ); IFS=$defaultIFS
+              IFS=$'\\n'; COMPREPLY=( $(compgen -W '$(bl resource list issueTypes)' -- "$cur") ); IFS=$defaultIFS
               [[ ! $cur =~ ^[\\'\\"] ]] && COMPREPLY=( "${COMPREPLY[@]// /\\\\ }" )
               ;;
             -c|--category)
@@ -404,7 +404,7 @@ complete -c bl -n '__fish_seen_subcommand_from create' -s s -l summary -d 'issue
 complete -c bl -n '__fish_seen_subcommand_from create' -s d -l description -d 'issue description'
 complete -c bl -n '__fish_seen_subcommand_from create' -s S -l start-date -d 'issue start date'
 complete -c bl -n '__fish_seen_subcommand_from create' -s D -l due-date -d 'issue due date'
-complete -c bl -n '__fish_seen_subcommand_from create' -s t -l issue-type -xa '(bl resource list issue_types)' -d 'issue type'
+complete -c bl -n '__fish_seen_subcommand_from create' -s t -l issue-type -xa '(bl resource list issueTypes)' -d 'issue type'
 complete -c bl -n '__fish_seen_subcommand_from create' -s c -l category -xa '(bl resource list categories)' -d 'issue category'
 complete -c bl -n '__fish_seen_subcommand_from create' -s v -l version -xa '(bl resource list versions)' -d 'issue version'
 complete -c bl -n '__fish_seen_subcommand_from create' -s m -l milestone -xa '(bl resource list versions)' -d 'issue milestone'
@@ -417,7 +417,7 @@ complete -c bl -n '__fish_seen_subcommand_from update' -s s -l summary -d 'issue
 complete -c bl -n '__fish_seen_subcommand_from update' -s d -l description -d 'issue description'
 complete -c bl -n '__fish_seen_subcommand_from update' -s S -l start-date -d 'issue start date'
 complete -c bl -n '__fish_seen_subcommand_from update' -s D -l due-date -d 'issue due date'
-complete -c bl -n '__fish_seen_subcommand_from update' -s t -l issue-type -xa '(bl resource list issue_types)' -d 'issue type'
+complete -c bl -n '__fish_seen_subcommand_from update' -s t -l issue-type -xa '(bl resource list issueTypes)' -d 'issue type'
 complete -c bl -n '__fish_seen_subcommand_from update' -s c -l category -xa '(bl resource list categories)' -d 'issue category'
 complete -c bl -n '__fish_seen_subcommand_from update' -s v -l version -xa '(bl resource list versions)' -d 'issue version'
 complete -c bl -n '__fish_seen_subcommand_from update' -s m -l milestone -xa '(bl resource list versions)' -d 'issue milestone'
@@ -432,7 +432,7 @@ complete -c bl -n '__fish_seen_subcommand_from resource; and __fish_seen_subcomm
 complete -c bl -n '__fish_seen_subcommand_from resource; and not __fish_seen_subcommand_from sync list' -xa list -d 'list Backlog resources from caches'
 complete -c bl -n '__fish_seen_subcommand_from resource; and __fish_seen_subcommand_from list' -s p -l project -xa '(bl resource list projects)' -d 'create issue on PROJECT'
 complete -c bl -n '__fish_seen_subcommand_from resource; and __fish_seen_subcommand_from list' -s h -l help -d 'print usage and exit'
-complete -c bl -n '__fish_seen_subcommand_from resource; and __fish_seen_subcommand_from list' -xa 'projects issue_types categories versions priorities statuses resolutions' -d 'resource_type'
+complete -c bl -n '__fish_seen_subcommand_from resource; and __fish_seen_subcommand_from list' -xa 'projects issueTypes categories versions priorities statuses resolutions' -d 'resource_type'
 complete -c bl -n '__fish_use_subcommand' -xa configure -d 'edit config'
 complete -c bl -n '__fish_seen_subcommand_from completion' -s h -l help -d 'print usage and exit'
 complete -c bl -n '__fish_use_subcommand' -xa completion -d 'print evaluatable completion script'
@@ -543,8 +543,8 @@ def do_create(args):
 
     registry = load_registry()
     parent_issue = args.parent_issue or get_item_recursive(registry, ['defaults', 'spaces', BL_SPACE, 'projects', project, 'parent_issue'])
-    summary = args.summary or get_item_recursive(registry, ['caches', 'spaces', BL_SPACE, 'projects', project, 'issue_types', args.issue_type, 'template_summary'])
-    description = args.description or get_item_recursive(registry, ['caches', 'spaces', BL_SPACE, 'projects', project, 'issue_types', args.issue_type, 'template_description'])
+    summary = args.summary or get_item_recursive(registry, ['caches', 'spaces', BL_SPACE, 'projects', project, 'issueTypes', args.issue_type, 'template_summary'])
+    description = args.description or get_item_recursive(registry, ['caches', 'spaces', BL_SPACE, 'projects', project, 'issueTypes', args.issue_type, 'template_description'])
     start_date = args.start_date or (today.strftime('%Y-%m-%d') if get_item_recursive(registry, ['defaults', 'spaces', BL_SPACE, 'projects', project, 'start_date']) == 'today' else None)
     due_date = args.due_date or (today.strftime('%Y-%m-%d') if get_item_recursive(registry, ['defaults', 'spaces', BL_SPACE, 'projects', project, 'due_date']) == 'today' else None)
     issue_type = args.issue_type or get_item_recursive(registry, ['defaults', 'spaces', BL_SPACE, 'projects', project, 'issue_type'])
@@ -571,7 +571,7 @@ def do_create(args):
     params['description'] = description
     params['startDate'] = start_date
     params['dueDate'] = due_date
-    params['issueTypeId'] = get_item_recursive(registry, ['caches', 'spaces', BL_SPACE, 'projects', project, 'issue_types', issue_type, 'id'], issue_type)
+    params['issueTypeId'] = get_item_recursive(registry, ['caches', 'spaces', BL_SPACE, 'projects', project, 'issueTypes', issue_type, 'id'], issue_type)
     params['categoryId[]'] = get_item_recursive(registry, ['caches', 'spaces', BL_SPACE, 'projects', project, 'categories', category, 'id'], category)
     params['versionId[]'] = get_item_recursive(registry, ['caches', 'spaces', BL_SPACE, 'projects', project, 'versions', version, 'id'], version)
     params['milestoneId[]'] = get_item_recursive(registry, ['caches', 'spaces', BL_SPACE, 'projects', project, 'versions', milestone, 'id'], milestone)
@@ -640,7 +640,7 @@ def do_update(args):
     params['description'] = description
     params['startDate'] = start_date
     params['dueDate'] = due_date
-    params['issueTypeId'] = get_item_recursive(registry, ['caches', 'spaces', BL_SPACE, 'projects', project, 'issue_types', issue_type, 'id'], issue_type)
+    params['issueTypeId'] = get_item_recursive(registry, ['caches', 'spaces', BL_SPACE, 'projects', project, 'issueTypes', issue_type, 'id'], issue_type)
     params['categoryId[]'] = get_item_recursive(registry, ['caches', 'spaces', BL_SPACE, 'projects', project, 'categories', category, 'id'], category)
     params['versionId[]'] = get_item_recursive(registry, ['caches', 'spaces', BL_SPACE, 'projects', project, 'versions', version, 'id'], version)
     params['milestoneId[]'] = get_item_recursive(registry, ['caches', 'spaces', BL_SPACE, 'projects', project, 'versions', milestone, 'id'], milestone)
@@ -677,25 +677,25 @@ def do_resource_sync(args):
         resource = request_get_backlog_resources(f'/api/v2/projects/{project}')
         set_item_recursive(registry, ['caches', 'spaces', BL_SPACE, 'projects', project, 'id'], resource['id'])
 
-    set_default_item_recursive(registry, ['defaults', 'spaces', BL_SPACE, 'projects', project, 'parent_issue'], None)
-    set_default_item_recursive(registry, ['defaults', 'spaces', BL_SPACE, 'projects', project, 'start_date'], None)
-    set_default_item_recursive(registry, ['defaults', 'spaces', BL_SPACE, 'projects', project, 'due_date'], None)
-    set_default_item_recursive(registry, ['defaults', 'spaces', BL_SPACE, 'projects', project, 'issue_type'], None)
+    set_default_item_recursive(registry, ['defaults', 'spaces', BL_SPACE, 'projects', project, 'parentIssue'], None)
+    set_default_item_recursive(registry, ['defaults', 'spaces', BL_SPACE, 'projects', project, 'startDate'], None)
+    set_default_item_recursive(registry, ['defaults', 'spaces', BL_SPACE, 'projects', project, 'dueDate'], None)
+    set_default_item_recursive(registry, ['defaults', 'spaces', BL_SPACE, 'projects', project, 'issueType'], None)
     set_default_item_recursive(registry, ['defaults', 'spaces', BL_SPACE, 'projects', project, 'category'], None)
     set_default_item_recursive(registry, ['defaults', 'spaces', BL_SPACE, 'projects', project, 'version'], None)
     set_default_item_recursive(registry, ['defaults', 'spaces', BL_SPACE, 'projects', project, 'milestone'], None)
     set_default_item_recursive(registry, ['defaults', 'spaces', BL_SPACE, 'projects', project, 'priority'], None)
-    set_item_recursive(registry, ['caches', 'spaces', BL_SPACE, 'projects', project, 'issue_types'], {})
+    set_item_recursive(registry, ['caches', 'spaces', BL_SPACE, 'projects', project, 'issueTypes'], {})
     set_item_recursive(registry, ['caches', 'spaces', BL_SPACE, 'projects', project, 'categories'], {})
     set_item_recursive(registry, ['caches', 'spaces', BL_SPACE, 'projects', project, 'versions'], {})
     for resource in request_get_backlog_resources(f'/api/v2/projects/{project}/issueTypes'):
-        set_item_recursive(registry, ['caches', 'spaces', BL_SPACE, 'projects', project, 'issue_types', resource['name']], {'id': resource['id'], 'order': resource['displayOrder'], 'templateSummary': resource['templateSummary'], 'templateDescription': resource['templateDescription']})
+        set_item_recursive(registry, ['caches', 'spaces', BL_SPACE, 'projects', project, 'issueTypes', resource['name']], {'id': resource['id'], 'displayOrder': resource['displayOrder'], 'templateSummary': resource['templateSummary'], 'templateDescription': resource['templateDescription']})
     for resource in request_get_backlog_resources(f'/api/v2/projects/{project}/categories'):
-        set_item_recursive(registry, ['caches', 'spaces', BL_SPACE, 'projects', project, 'categories', resource['name']], {'id': resource['id'], 'order': resource['displayOrder']})
+        set_item_recursive(registry, ['caches', 'spaces', BL_SPACE, 'projects', project, 'categories', resource['name']], {'id': resource['id'], 'displayOrder': resource['displayOrder']})
     for resource in request_get_backlog_resources(f'/api/v2/projects/{project}/versions'):
-        set_item_recursive(registry, ['caches', 'spaces', BL_SPACE, 'projects', project, 'versions', resource['name']], {'id': resource['id'], 'order': resource['displayOrder']})
+        set_item_recursive(registry, ['caches', 'spaces', BL_SPACE, 'projects', project, 'versions', resource['name']], {'id': resource['id'], 'displayOrder': resource['displayOrder']})
     for resource in request_get_backlog_resources(f'/api/v2/projects/{project}/statuses'):
-        set_item_recursive(registry, ['caches', 'spaces', BL_SPACE, 'projects', project, 'statuses', resource['name']], {'id': resource['id'], 'order': resource['displayOrder']})
+        set_item_recursive(registry, ['caches', 'spaces', BL_SPACE, 'projects', project, 'statuses', resource['name']], {'id': resource['id'], 'displayOrder': resource['displayOrder']})
 
     save_registry(registry)
 
@@ -731,7 +731,7 @@ def do_resource_list(args):
             return 1
         registry = load_registry()
         resources = get_item_recursive(registry, ['caches', 'spaces', BL_SPACE, 'projects', project, resource_type], {})
-        resource_names = sorted(resources.keys(), key=lambda key: resources[key]['order'])
+        resource_names = sorted(resources.keys(), key=lambda key: resources[key]['displayOrder'])
 
     for resource_name in resource_names:
         print(resource_name)
