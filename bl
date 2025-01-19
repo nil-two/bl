@@ -50,13 +50,13 @@ options:
   -I, --parent-issue=ISSUE       issue parent issue
   -s, --summary=SUMMARY          issue summary
   -d, --description=DESCRIPTION  issue description
-  -S, --start-date=DATE          issue start date (default: today)
-  -D, --due-date=DATE            issue due date (default: today)
+  -S, --start-date=DATE          issue start date
+  -D, --due-date=DATE            issue due date
   -t, --issue-type=ISSUE_TYPE    issue type
   -c, --category=CATEGORY        issue category
   -v, --version=VERSION          issue version
   -m, --milestone=MILESTONE      issue milestone
-  -P, --priority=PRIORITY        issue priority (default: 中)
+  -P, --priority=PRIORITY        issue priority
   -h, --help                     print usage and exit
 '''.strip()
 SUBCMD_USAGE['update'] = '''
@@ -545,13 +545,13 @@ def do_create(args):
     parent_issue = args.parent_issue or get_item_recursive(registry, ['defaults', 'spaces', BL_SPACE, 'projects', project, 'parent_issue'])
     summary = args.summary
     description = args.description
-    start_date = args.start_date or today.strftime('%Y-%m-%d')
-    due_date = args.due_date or today.strftime(('%Y-%m-%d'))
+    start_date = args.start_date or (today.strftime('%Y-%m-%d') if get_item_recursive(registry, ['defaults', 'spaces', BL_SPACE, 'projects', project, 'start_date']) == 'today' else None)
+    due_date = args.due_date or (today.strftime('%Y-%m-%d') if get_item_recursive(registry, ['defaults', 'spaces', BL_SPACE, 'projects', project, 'due_date']) == 'today' else None)
     issue_type = args.issue_type or get_item_recursive(registry, ['defaults', 'spaces', BL_SPACE, 'projects', project, 'issue_type'])
     category = args.category or get_item_recursive(registry, ['defaults', 'spaces', BL_SPACE, 'projects', project, 'category'])
     version = args.version or get_item_recursive(registry, ['defaults', 'spaces', BL_SPACE, 'projects', project, 'version'])
     milestone = args.milestone or get_item_recursive(registry, ['defaults', 'spaces', BL_SPACE, 'projects', project, 'milestone'])
-    priority = args.priority or get_item_recursive(registry, ['defaults', 'spaces', BL_SPACE, 'projects', project, 'priority']) or '中'
+    priority = args.priority or get_item_recursive(registry, ['defaults', 'spaces', BL_SPACE, 'projects', project, 'priority'])
     if summary is None or summary == '':
         warn('new: no input summary')
         return 1
@@ -678,11 +678,13 @@ def do_resource_sync(args):
         set_item_recursive(registry, ['caches', 'spaces', BL_SPACE, 'projects', project, 'id'], resource['id'])
 
     set_default_item_recursive(registry, ['defaults', 'spaces', BL_SPACE, 'projects', project, 'parent_issue'], None)
+    set_default_item_recursive(registry, ['defaults', 'spaces', BL_SPACE, 'projects', project, 'start_date'], None)
+    set_default_item_recursive(registry, ['defaults', 'spaces', BL_SPACE, 'projects', project, 'due_date'], None)
     set_default_item_recursive(registry, ['defaults', 'spaces', BL_SPACE, 'projects', project, 'issue_type'], None)
     set_default_item_recursive(registry, ['defaults', 'spaces', BL_SPACE, 'projects', project, 'category'], None)
     set_default_item_recursive(registry, ['defaults', 'spaces', BL_SPACE, 'projects', project, 'version'], None)
     set_default_item_recursive(registry, ['defaults', 'spaces', BL_SPACE, 'projects', project, 'milestone'], None)
-    set_default_item_recursive(registry, ['defaults', 'spaces', BL_SPACE, 'projects', project, 'priority'], '中')
+    set_default_item_recursive(registry, ['defaults', 'spaces', BL_SPACE, 'projects', project, 'priority'], None)
     set_item_recursive(registry, ['caches', 'spaces', BL_SPACE, 'projects', project, 'issue_types'], {})
     set_item_recursive(registry, ['caches', 'spaces', BL_SPACE, 'projects', project, 'categories'], {})
     set_item_recursive(registry, ['caches', 'spaces', BL_SPACE, 'projects', project, 'versions'], {})
