@@ -543,8 +543,8 @@ def do_create(args):
 
     registry = load_registry()
     parent_issue = args.parent_issue or get_item_recursive(registry, ['defaults', 'spaces', BL_SPACE, 'projects', project, 'parent_issue'])
-    summary = args.summary
-    description = args.description
+    summary = args.summary or get_item_recursive(registry, ['caches', 'spaces', BL_SPACE, 'projects', project, 'issue_types', args.issue_type, 'template_summary'])
+    description = args.description or get_item_recursive(registry, ['caches', 'spaces', BL_SPACE, 'projects', project, 'issue_types', args.issue_type, 'template_description'])
     start_date = args.start_date or (today.strftime('%Y-%m-%d') if get_item_recursive(registry, ['defaults', 'spaces', BL_SPACE, 'projects', project, 'start_date']) == 'today' else None)
     due_date = args.due_date or (today.strftime('%Y-%m-%d') if get_item_recursive(registry, ['defaults', 'spaces', BL_SPACE, 'projects', project, 'due_date']) == 'today' else None)
     issue_type = args.issue_type or get_item_recursive(registry, ['defaults', 'spaces', BL_SPACE, 'projects', project, 'issue_type'])
@@ -689,7 +689,7 @@ def do_resource_sync(args):
     set_item_recursive(registry, ['caches', 'spaces', BL_SPACE, 'projects', project, 'categories'], {})
     set_item_recursive(registry, ['caches', 'spaces', BL_SPACE, 'projects', project, 'versions'], {})
     for resource in request_get_backlog_resources(f'/api/v2/projects/{project}/issueTypes'):
-        set_item_recursive(registry, ['caches', 'spaces', BL_SPACE, 'projects', project, 'issue_types', resource['name']], {'id': resource['id'], 'order': resource['displayOrder']})
+        set_item_recursive(registry, ['caches', 'spaces', BL_SPACE, 'projects', project, 'issue_types', resource['name']], {'id': resource['id'], 'order': resource['displayOrder'], 'templateSummary': resource['templateSummary'], 'templateDescription': resource['templateDescription']})
     for resource in request_get_backlog_resources(f'/api/v2/projects/{project}/categories'):
         set_item_recursive(registry, ['caches', 'spaces', BL_SPACE, 'projects', project, 'categories', resource['name']], {'id': resource['id'], 'order': resource['displayOrder']})
     for resource in request_get_backlog_resources(f'/api/v2/projects/{project}/versions'):
