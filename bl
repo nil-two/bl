@@ -529,53 +529,86 @@ def request_post_backlog_resources(api_path, method='POST', params={}):
 
 def do_create(args):
     if BL_SPACE is None:
-        warn('new: BL_SPACE is not set')
+        warn('create: BL_SPACE is not set')
         return 1
     if BL_API_KEY is None:
-        warn('new: BL_API_KEY is not set')
+        warn('create: BL_API_KEY is not set')
         return 1
 
     today = datetime.datetime.today()
     project = args.project or BL_PROJECT
     if project is None:
-        warn('new: no input project')
+        warn('create: no input project')
         return 1
 
     registry = load_registry()
-    parent_issue = args.parent_issue or get_item_recursive(registry, ['defaults', 'spaces', BL_SPACE, 'projects', project, 'create', 'parent_issue'])
-    summary = args.summary or get_item_recursive(registry, ['caches', 'spaces', BL_SPACE, 'projects', project, 'issueTypes', args.issue_type, 'template_summary'])
-    description = args.description or get_item_recursive(registry, ['caches', 'spaces', BL_SPACE, 'projects', project, 'issueTypes', args.issue_type, 'template_description'])
-    start_date = args.start_date or (today.strftime('%Y-%m-%d') if get_item_recursive(registry, ['defaults', 'spaces', BL_SPACE, 'projects', project, 'create', 'start_date']) == 'today' else None)
-    due_date = args.due_date or (today.strftime('%Y-%m-%d') if get_item_recursive(registry, ['defaults', 'spaces', BL_SPACE, 'projects', project, 'create', 'due_date']) == 'today' else None)
-    issue_type = args.issue_type or get_item_recursive(registry, ['defaults', 'spaces', BL_SPACE, 'projects', project, 'create', 'issue_type'])
-    category = args.category or get_item_recursive(registry, ['defaults', 'spaces', BL_SPACE, 'projects', project, 'create', 'category'])
-    version = args.version or get_item_recursive(registry, ['defaults', 'spaces', BL_SPACE, 'projects', project, 'create', 'version'])
-    milestone = args.milestone or get_item_recursive(registry, ['defaults', 'spaces', BL_SPACE, 'projects', project, 'create', 'milestone'])
-    priority = args.priority or get_item_recursive(registry, ['defaults', 'spaces', BL_SPACE, 'projects', project, 'create', 'priority'])
+    defaults = get_item_recursive(registry, ['defaults', 'spaces', BL_SPACE, 'projects', project, 'create'])
+    caches = get_item_recursive(registry, ['caches', 'spaces', BL_SPACE, 'projects', project])
+    if defaults is None or caches is None:
+        warn(f'create: project not synced -- \'{project}\'')
+        return 1
+
+    parent_issue = args.parent_issue or get_item_recursive(defaults, ['parentIssue'])
+    summary = args.summary or get_item_recursive(caches, ['issueTypes', args.issue_type, 'templateSummary'])
+    description = args.description or get_item_recursive(caches, ['issueTypes', args.issue_type, 'templateDescription'])
+    start_date = args.start_date or (today.strftime('%Y-%m-%d') if get_item_recursive(defaults, ['start_date']) == 'today' else None)
+    due_date = args.due_date or (today.strftime('%Y-%m-%d') if get_item_recursive(defaults, ['due_date']) == 'today' else None)
+    issue_type = args.issue_type or get_item_recursive(defaults, ['issueType'])
+    category = args.category or get_item_recursive(defaults, ['category'])
+    version = args.version or get_item_recursive(defaults, ['version'])
+    milestone = args.milestone or get_item_recursive(defaults, ['milestone'])
+    priority = args.priority or get_item_recursive(defaults, ['priority'])
     if summary is None or summary == '':
-        warn('new: no input summary')
+        warn('create: no input summary')
         return 1
     if issue_type is None or issue_type == '':
-        warn('new: no input issue type')
+        warn('create: no input issue type')
         return 1
     if priority is None or priority == '':
-        warn('new: no input priority')
+        warn('create: no input priority')
+        return 1
+
+    project_id = get_item_recursive(caches, ['id'])
+    parent_issue_id = None
+    issue_type_id = get_item_recursive(caches, ['issueTypes', issue_type, 'id'])
+    category_id = get_item_recursive(caches, ['categories', category, 'id'])
+    version_id = get_item_recursive(caches, ['versions', version, 'id'])
+    milestone_id = get_item_recursive(caches, ['versions', milestone, 'id'])
+    priority_id = get_item_recursive(VIRTUAL_RESOURCES, ['priorities', priority, 'id'])
+    if parent_issue is not None and parent_issue != '':
+        resource = request_get_backlog_resources(f'/api/v2/issues/{parent_issue}')
+        parent_issue_id = resource['id']
+    if project_id is None:
+        warn(f'create: project not synced -- \'{project}\'')
+        return 1
+    if issue_type is not None and issue_type != '' and issue_type_id is None:
+        warn(f'create: unrecognized issue type -- \'{issue_type}\'')
+        return 1
+    if category is not None and category != '' and category_id is None:
+        warn(f'create: unrecognized category -- \'{category}\'')
+        return 1
+    if version is not None and version != '' and version_id is None:
+        warn(f'create: unrecognized version -- \'{version}\'')
+        return 1
+    if milestone is not None and milestone != '' and milestone_id is None:
+        warn(f'create: unrecognized milestone -- \'{milestone}\'')
+        return 1
+    if priority is not None and priority != '' and priority_id is None:
+        warn(f'create: unrecognized priority -- \'{priority}\'')
         return 1
 
     params = {}
-    params['projectId'] = get_item_recursive(registry, ['caches', 'spaces', BL_SPACE, 'projects', project, 'id'], project)
-    if parent_issue is not None:
-        resource = request_get_backlog_resources(f'/api/v2/issues/{parent_issue}')
-        params['parentIssueId'] = resource['id']
+    params['projectId'] = project_id
+    params['parentIssueId'] = parent_issue_id
     params['summary'] = summary
     params['description'] = description
     params['startDate'] = start_date
     params['dueDate'] = due_date
-    params['issueTypeId'] = get_item_recursive(registry, ['caches', 'spaces', BL_SPACE, 'projects', project, 'issueTypes', issue_type, 'id'], issue_type)
-    params['categoryId[]'] = get_item_recursive(registry, ['caches', 'spaces', BL_SPACE, 'projects', project, 'categories', category, 'id'], category)
-    params['versionId[]'] = get_item_recursive(registry, ['caches', 'spaces', BL_SPACE, 'projects', project, 'versions', version, 'id'], version)
-    params['milestoneId[]'] = get_item_recursive(registry, ['caches', 'spaces', BL_SPACE, 'projects', project, 'versions', milestone, 'id'], milestone)
-    params['priorityId'] = get_item_recursive(VIRTUAL_RESOURCES, ['priorities', priority, 'id'], priority)
+    params['issueTypeId'] = issue_type_id
+    params['categoryId[]'] = category_id
+    params['versionId[]'] = version_id
+    params['milestoneId[]'] = milestone_id
+    params['priorityId'] = priority_id
     params['assigneeId'] = get_item_recursive(registry, ['caches', 'spaces', BL_SPACE, 'users', 'myself', 'id'])
     params2 = {}
     for param, value in params.items():
@@ -605,6 +638,12 @@ def do_update(args):
 
     registry = load_registry()
     project = issue_match.group(1)
+    defaults = get_item_recursive(registry, ['defaults', 'spaces', BL_SPACE, 'projects', project, 'create'])
+    caches = get_item_recursive(registry, ['caches', 'spaces', BL_SPACE, 'projects', project])
+    if defaults is None or caches is None:
+        warn(f'create: project not synced -- \'{project}\'')
+        return 1
+
     parent_issue = args.parent_issue
     summary = args.summary
     description = args.description
@@ -630,23 +669,56 @@ def do_update(args):
         warn('update: status cannot be unset')
         return 1
 
-    params = {}
-    if parent_issue == '':
-        params['parentIssueId'] = ''
-    elif parent_issue is not None:
+    project_id = get_item_recursive(caches, ['id'])
+    parent_issue_id = None
+    issue_type_id = get_item_recursive(caches, ['issueTypes', issue_type, 'id'])
+    category_id = get_item_recursive(caches, ['categories', category, 'id'])
+    version_id = get_item_recursive(caches, ['versions', version, 'id'])
+    milestone_id = get_item_recursive(caches, ['versions', milestone, 'id'])
+    priority_id = get_item_recursive(VIRTUAL_RESOURCES, ['priorities', priority, 'id'])
+    status_id = get_item_recursive(VIRTUAL_RESOURCES, ['statuses', status, 'id'])
+    resolution_id = get_item_recursive(VIRTUAL_RESOURCES, ['resolutions', resolution, 'id'])
+    if parent_issue is not None and parent_issue != '':
         resource = request_get_backlog_resources(f'/api/v2/issues/{parent_issue}')
-        params['parentIssueId'] = resource['id']
+        parent_issue_id = resource['id']
+    if project_id is None:
+        warn(f'create: project not synced -- \'{project}\'')
+        return 1
+    if issue_type is not None and issue_type != '' and issue_type_id is None:
+        warn(f'create: unrecognized issue type -- \'{issue_type}\'')
+        return 1
+    if category is not None and category != '' and category_id is None:
+        warn(f'create: unrecognized category -- \'{category}\'')
+        return 1
+    if version is not None and version != '' and version_id is None:
+        warn(f'create: unrecognized version -- \'{version}\'')
+        return 1
+    if milestone is not None and milestone != '' and milestone_id is None:
+        warn(f'create: unrecognized milestone -- \'{milestone}\'')
+        return 1
+    if priority is not None and priority != '' and priority_id is None:
+        warn(f'create: unrecognized priority -- \'{priority}\'')
+        return 1
+    if status is not None and status != '' and status_id is None:
+        warn(f'create: unrecognized status -- \'{status}\'')
+        return 1
+    if resolution is not None and resolution != '' and resolution_id is None:
+        warn(f'create: unrecognized resolution -- \'{resolution}\'')
+        return 1
+
+    params = {}
+    params['parentIssueId'] = parent_issue_id
     params['summary'] = summary
     params['description'] = description
     params['startDate'] = start_date
     params['dueDate'] = due_date
-    params['issueTypeId'] = get_item_recursive(registry, ['caches', 'spaces', BL_SPACE, 'projects', project, 'issueTypes', issue_type, 'id'], issue_type)
-    params['categoryId[]'] = get_item_recursive(registry, ['caches', 'spaces', BL_SPACE, 'projects', project, 'categories', category, 'id'], category)
-    params['versionId[]'] = get_item_recursive(registry, ['caches', 'spaces', BL_SPACE, 'projects', project, 'versions', version, 'id'], version)
-    params['milestoneId[]'] = get_item_recursive(registry, ['caches', 'spaces', BL_SPACE, 'projects', project, 'versions', milestone, 'id'], milestone)
-    params['priorityId'] = get_item_recursive(VIRTUAL_RESOURCES, ['priorities', priority, 'id'], priority)
-    params['statusId'] = get_item_recursive(registry, ['caches', 'spaces', BL_SPACE, 'projects', project, 'statuses', status, 'id'], status)
-    params['resolutionId'] = get_item_recursive(VIRTUAL_RESOURCES, ['resolutions', resolution, 'id'], resolution)
+    params['issueTypeId'] = issue_type_id
+    params['categoryId[]'] = category_id
+    params['versionId[]'] = version_id
+    params['milestoneId[]'] = milestone_id
+    params['priorityId'] = priority_id
+    params['statusId'] = status_id
+    params['resolutionId'] = resolution_id
     params2 = {}
     for param, value in params.items():
         if value is not None:
@@ -828,6 +900,11 @@ def main():
     subparser_update.add_argument('-r', '--resolution', dest='resolution')
     subparser_update.add_argument('-h', '--help', action='store_true', dest='help')
     subparser_update.set_defaults(handler=do_update, command='update')
+
+    subparser_update = subparsers.add_parser('list', allow_abbrev=False, add_help=False)
+    subparser_update.add_argument('-i', '--issue', dest='issue')
+    subparser_update.add_argument('-h', '--help', action='store_true', dest='help')
+    subparser_update.set_defaults(handler=do_list, command='list')
 
     subparser_resource = subparsers.add_parser('resource', allow_abbrev=False, add_help=False)
     subparser_resources = subparser_resource.add_subparsers()
