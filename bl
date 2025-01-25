@@ -906,11 +906,6 @@ def main():
     subparser_update.add_argument('-h', '--help', action='store_true', dest='help')
     subparser_update.set_defaults(handler=do_update, command='update')
 
-    subparser_update = subparsers.add_parser('list', allow_abbrev=False, add_help=False)
-    subparser_update.add_argument('-i', '--issue', dest='issue')
-    subparser_update.add_argument('-h', '--help', action='store_true', dest='help')
-    subparser_update.set_defaults(handler=do_list, command='list')
-
     subparser_resource = subparsers.add_parser('resource', allow_abbrev=False, add_help=False)
     subparser_resources = subparser_resource.add_subparsers()
 
