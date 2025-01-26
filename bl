@@ -8,14 +8,15 @@ import re
 import subprocess
 import sys
 import time
+import urllib.error
 import urllib.parse
 import urllib.request
-import urllib.error
+
 
 BL_SPACE = os.getenv('BL_SPACE')
 BL_PROJECT = os.getenv('BL_PROJECT')
 BL_API_KEY = os.getenv('BL_API_KEY')
-BL_REGISTRY = os.getenv('BL_REGISTRY', os.path.join(os.getenv('XDG_CONFIG_HOME', os.path.join(os.getenv('HOME'), '.config')), 'bl', 'registry.json'))
+BL_REGISTRY = os.getenv('BL_REGISTRY', os.path.join(os.getenv('XDG_CONFIG_HOME', os.path.join(pathlib.Path.home(), '.config')), 'bl', 'registry.json'))
 
 CMD_NAME = 'bl'
 CMD_USAGE = '''
@@ -454,11 +455,15 @@ complete -c bl -n '__fish_seen_subcommand_from help; and not __fish_seen_subcomm
 # embed:end:completion
 
 
-def warn(e):
+class PreconditionError(Exception):
+    pass
+
+
+def warn(e: str):
     print(f'{CMD_NAME}: {e}', file=sys.stderr)
 
 
-def get_item_recursive(d, keys, default_value=None):
+def recursive_get(d: dict, keys: list[str], default_value: object = None):
     cur = d
     for key in keys:
         if key not in cur:
@@ -467,7 +472,7 @@ def get_item_recursive(d, keys, default_value=None):
     return cur
 
 
-def set_item_recursive(d, keys, value):
+def recursive_set(d: dict, keys: list[str], value: object):
     cur = d
     for key in keys[:-1]:
         if key not in cur:
@@ -476,7 +481,7 @@ def set_item_recursive(d, keys, value):
     cur[keys[-1]] = value
 
 
-def set_default_item_recursive(d, keys, value):
+def recursive_set_default(d: dict, keys: list[str], value: object):
     cur = d
     for key in keys[:-1]:
         if key not in cur:
@@ -488,42 +493,38 @@ def set_default_item_recursive(d, keys, value):
 
 def load_registry():
     if BL_REGISTRY is None:
-        raise Exception('BL_REGISTRY is not set')
+        raise PreconditionError('BL_REGISTRY is not set')
     registry_path = pathlib.Path(BL_REGISTRY)
     if registry_path.exists():
         return json.loads(registry_path.read_text())
     else:
-        return {'version': '1.0', 'defaults': {}, 'caches': {}}
+        return {'version': '1.0', 'defaults': {}, 'resources': {}}
 
 
-def save_registry(registry):
+def save_registry(registry: dict):
     if BL_REGISTRY is None:
-        raise Exception('BL_REGISTRY is not set')
+        raise PreconditionError('BL_REGISTRY is not set')
     registry_path = pathlib.Path(BL_REGISTRY)
     registry_path.parent.mkdir(parents=True, exist_ok=True)
     registry_path.write_text(json.dumps(registry, ensure_ascii=False, indent=4) + '\n')
 
 
-def get_project_default(registry, project, param):
-    return get_item_recursive(registry, ['defaults', 'spaces', BL_SPACE, 'projects', project, param])
-
-
-def request_get_backlog_resources(api_path):
+def request_get_backlog_resources(api_path: str):
     if BL_SPACE is None:
-        raise Exception('BL_SPACE is not set')
+        raise PreconditionError('BL_SPACE is not set')
     if BL_API_KEY is None:
-        raise Exception('BL_API_KEY is not set')
+        raise PreconditionError('BL_API_KEY is not set')
     req = urllib.request.Request(f'https://{BL_SPACE}{api_path}?apiKey={BL_API_KEY}', method='GET')
     time.sleep(1)
     with urllib.request.urlopen(req) as res:
         return json.loads(res.read().decode('utf-8'))
 
 
-def request_post_backlog_resources(api_path, method='POST', params={}):
+def request_post_backlog_resources(api_path: str, method: str = 'POST', params: dict = {}):
     if BL_SPACE is None:
-        raise Exception('BL_SPACE is not set')
+        raise PreconditionError('BL_SPACE is not set')
     if BL_API_KEY is None:
-        raise Exception('BL_API_KEY is not set')
+        raise PreconditionError('BL_API_KEY is not set')
     headers = {'Content-Type': 'application/x-www-form-urlencoded'}
     data = urllib.parse.urlencode(params).encode('utf-8')
     req = urllib.request.Request(f'https://{BL_SPACE}{api_path}?apiKey={BL_API_KEY}', method=method, headers=headers, data=data)
@@ -532,122 +533,104 @@ def request_post_backlog_resources(api_path, method='POST', params={}):
         return json.loads(res.read().decode('utf-8'))
 
 
-def do_create(args):
+def do_create(args: argparse.Namespace):
     if BL_SPACE is None:
-        warn('create: BL_SPACE is not set')
-        return 1
+        raise PreconditionError('BL_SPACE is not set')
     if BL_API_KEY is None:
-        warn('create: BL_API_KEY is not set')
-        return 1
+        raise PreconditionError('BL_API_KEY is not set')
 
     today = datetime.datetime.today()
+    registry = load_registry()
+
     project = args.project or BL_PROJECT
     if project is None:
-        warn('create: no input project')
-        return 1
-
-    registry = load_registry()
-    defaults = get_item_recursive(registry, ['defaults', 'spaces', BL_SPACE, 'projects', project, 'create'])
-    caches = get_item_recursive(registry, ['caches', 'spaces', BL_SPACE, 'projects', project])
-    if defaults is None or caches is None:
-        warn(f'create: project not synced -- \'{project}\'')
-        return 1
-
-    parent_issue = args.parent_issue or get_item_recursive(defaults, ['parentIssue'])
-    summary = args.summary or get_item_recursive(caches, ['issueTypes', args.issue_type, 'templateSummary'])
-    description = args.description or get_item_recursive(caches, ['issueTypes', args.issue_type, 'templateDescription'])
-    start_date = args.start_date or (today.strftime('%Y-%m-%d') if get_item_recursive(defaults, ['start_date']) == 'today' else None)
-    due_date = args.due_date or (today.strftime('%Y-%m-%d') if get_item_recursive(defaults, ['due_date']) == 'today' else None)
-    issue_type = args.issue_type or get_item_recursive(defaults, ['issueType'])
-    category = args.category or get_item_recursive(defaults, ['category'])
-    version = args.version or get_item_recursive(defaults, ['version'])
-    milestone = args.milestone or get_item_recursive(defaults, ['milestone'])
-    priority = args.priority or get_item_recursive(defaults, ['priority'])
-    if summary is None or summary == '':
-        warn('create: no input summary')
-        return 1
-    if issue_type is None or issue_type == '':
-        warn('create: no input issue type')
-        return 1
-    if priority is None or priority == '':
-        warn('create: no input priority')
-        return 1
-
-    project_id = get_item_recursive(caches, ['id'])
-    parent_issue_id = None
-    issue_type_id = get_item_recursive(caches, ['issueTypes', issue_type, 'id'])
-    category_id = get_item_recursive(caches, ['categories', category, 'id'])
-    version_id = get_item_recursive(caches, ['versions', version, 'id'])
-    milestone_id = get_item_recursive(caches, ['versions', milestone, 'id'])
-    priority_id = get_item_recursive(VIRTUAL_RESOURCES, ['priorities', priority, 'id'])
-    if parent_issue is not None and parent_issue != '':
-        resource = request_get_backlog_resources(f'/api/v2/issues/{parent_issue}')
-        parent_issue_id = resource['id']
+        raise PreconditionError('no input project')
+    project_id = recursive_get(registry, ['resources', 'spaces', BL_SPACE, 'projects', project, 'id'])
     if project_id is None:
-        warn(f'create: project not synced -- \'{project}\'')
-        return 1
-    if issue_type is not None and issue_type != '' and issue_type_id is None:
-        warn(f'create: unrecognized issue type -- \'{issue_type}\'')
-        return 1
-    if category is not None and category != '' and category_id is None:
-        warn(f'create: unrecognized category -- \'{category}\'')
-        return 1
-    if version is not None and version != '' and version_id is None:
-        warn(f'create: unrecognized version -- \'{version}\'')
-        return 1
-    if milestone is not None and milestone != '' and milestone_id is None:
-        warn(f'create: unrecognized milestone -- \'{milestone}\'')
-        return 1
-    if priority is not None and priority != '' and priority_id is None:
-        warn(f'create: unrecognized priority -- \'{priority}\'')
-        return 1
+        raise PreconditionError(f'project not synced \'{project}\'')
+
+    defaults = recursive_get(registry, ['defaults', 'spaces', BL_SPACE, 'projects', project, 'create'], {})
+    resources = recursive_get(registry, ['resources', 'spaces', BL_SPACE, 'projects', project], {})
+
+    parent_issue = args.parent_issue or defaults.get('parentIssue')
+    summary = args.summary
+    description = args.description
+    start_date = args.start_date or defaults.get('startDate')
+    due_date = args.due_date or defaults.get('dueDate')
+    issue_type = args.issue_type or defaults.get('issueType')
+    category = args.category or defaults.get('category')
+    version = args.version or defaults.get('version')
+    milestone = args.milestone or defaults.get('milestone')
+    priority = args.priority or defaults.get('priority')
+    assignee = 'myself'
+    if summary is None or summary == '':
+        raise PreconditionError('no input summary')
+    if issue_type is None or issue_type == '':
+        raise PreconditionError('no input issue type')
+    if not (issue_type is None or issue_type == '') and recursive_get(resources, ['issueTypes', issue_type, 'id']) is None:
+        raise PreconditionError(f'unrecognized issue type \'{issue_type}\'')
+    if not (category is None or category == '') and recursive_get(resources, ['categories', category, 'id']) is None:
+        raise PreconditionError(f'unrecognized category \'{category}\'')
+    if not (version is None or version == '') and recursive_get(resources, ['versions', version, 'id']) is None:
+        raise PreconditionError(f'unrecognized version \'{version}\'')
+    if not (milestone is None or milestone == '') and recursive_get(resources, ['versions', milestone, 'id']) is None:
+        raise PreconditionError(f'unrecognized milestone \'{milestone}\'')
+    if priority is None or priority == '':
+        raise PreconditionError('no input priority')
+    if not (priority is None or priority == '') and recursive_get(VIRTUAL_RESOURCES, ['priorities', priority, 'id']) is None:
+        raise PreconditionError(f'unrecognized priority \'{priority}\'')
+    if not (assignee is None or assignee == '') and recursive_get(registry, ['resources', 'spaces', BL_SPACE, 'users', assignee, 'id']) is None:
+        raise PreconditionError(f'unrecognized user \'{assignee}\'')
 
     params = {}
     params['projectId'] = project_id
-    params['parentIssueId'] = parent_issue_id
     params['summary'] = summary
-    params['description'] = description
-    params['startDate'] = start_date
-    params['dueDate'] = due_date
-    params['issueTypeId'] = issue_type_id
-    params['categoryId[]'] = category_id
-    params['versionId[]'] = version_id
-    params['milestoneId[]'] = milestone_id
-    params['priorityId'] = priority_id
-    params['assigneeId'] = get_item_recursive(registry, ['caches', 'spaces', BL_SPACE, 'users', 'myself', 'id'])
-    params2 = {}
-    for param, value in params.items():
-        if value is not None:
-            params2[param] = value
+    if parent_issue is not None and parent_issue != '':
+        params['parentIssueId'] = request_get_backlog_resources(f'/api/v2/issues/{parent_issue}')['id']
+    if description is not None and description != '' or description is None and recursive_get(resources, ['issueTypes', issue_type, 'templateDescription']) is not None:
+        params['description'] = description or recursive_get(resources, ['issueTypes', issue_type, 'templateDescription'])
+    if start_date is not None and start_date != '':
+        params['startDate'] = today.strftime('%Y-%m-%d') if start_date == 'today' else start_date
+    if due_date is not None and due_date != '':
+        params['dueDate'] = today.strftime('%Y-%m-%d') if due_date == 'today' else due_date
+    if issue_type is not None and issue_type != '':
+        params['issueTypeId'] = recursive_get(resources, ['issueTypes', issue_type, 'id'])
+    if category is not None and category != '':
+        params['categoryId[]'] = recursive_get(resources, ['categories', category, 'id'])
+    if version is not None and version != '':
+        params['versionId[]'] = recursive_get(resources, ['versions', version, 'id'])
+    if milestone is not None and milestone != '':
+        params['milestoneId[]'] = recursive_get(resources, ['versions', milestone, 'id'])
+    if priority is not None and priority != '':
+        params['priorityId'] = recursive_get(VIRTUAL_RESOURCES, ['priorities', priority, 'id'])
+    if assignee is not None and assignee != '':
+        params['assigneeId'] = recursive_get(registry, ['resources', 'spaces', BL_SPACE, 'users', assignee, 'id'])
 
-    resource = request_post_backlog_resources('/api/v2/issues', method='POST', params=params2)
+    resource = request_post_backlog_resources('/api/v2/issues', method='POST', params=params)
     print(f'{resource['issueKey']} {resource['summary']}')
 
 
-def do_update(args):
+def do_update(args: argparse.Namespace):
     if BL_SPACE is None:
-        warn('update: BL_SPACE is not set')
-        return 1
+        raise PreconditionError('BL_SPACE is not set')
     if BL_API_KEY is None:
-        warn('update: BL_API_KEY is not set')
-        return 1
+        raise PreconditionError('BL_API_KEY is not set')
+
+    today = datetime.datetime.today()
+    registry = load_registry()
 
     issue = args.issue
     if issue is None:
-        warn('update: no input issue')
-        return 1
-    issue_match = re.match('([^-]+)-([^-]+)', issue)
+        raise PreconditionError('no input issue')
+    issue_match = re.match(r'([^-]+)-([^-]+)', issue)
     if issue_match is None:
-        warn('update: issue format is invalid \'{issue}\'')
-        return 1
-
-    registry = load_registry()
+        raise PreconditionError(f'issue format is invalid \'{issue}\'')
     project = issue_match.group(1)
-    defaults = get_item_recursive(registry, ['defaults', 'spaces', BL_SPACE, 'projects', project, 'create'])
-    caches = get_item_recursive(registry, ['caches', 'spaces', BL_SPACE, 'projects', project])
-    if defaults is None or caches is None:
-        warn(f'create: project not synced -- \'{project}\'')
-        return 1
+    project_id = recursive_get(registry, ['resources', 'spaces', BL_SPACE, 'projects', project, 'id'])
+    if project_id is None:
+        raise PreconditionError(f'project not synced \'{project}\'')
+
+    resources = recursive_get(registry, ['resources', 'spaces', BL_SPACE, 'projects', project], {})
 
     parent_issue = args.parent_issue
     summary = args.summary
@@ -661,169 +644,134 @@ def do_update(args):
     priority = args.priority
     status = args.status
     resolution = args.resolution
-    if summary == "":
-        warn('update: summary cannot be unset')
-        return 1
-    if issue_type == "":
-        warn('update: issue type cannot be unset')
-        return 1
-    if priority == "":
-        warn('update: priority cannot be unset')
-        return 1
-    if status == "":
-        warn('update: status cannot be unset')
-        return 1
-
-    project_id = get_item_recursive(caches, ['id'])
-    parent_issue_id = None
-    issue_type_id = get_item_recursive(caches, ['issueTypes', issue_type, 'id'])
-    category_id = get_item_recursive(caches, ['categories', category, 'id'])
-    version_id = get_item_recursive(caches, ['versions', version, 'id'])
-    milestone_id = get_item_recursive(caches, ['versions', milestone, 'id'])
-    priority_id = get_item_recursive(VIRTUAL_RESOURCES, ['priorities', priority, 'id'])
-    status_id = get_item_recursive(VIRTUAL_RESOURCES, ['statuses', status, 'id'])
-    resolution_id = get_item_recursive(VIRTUAL_RESOURCES, ['resolutions', resolution, 'id'])
-    if parent_issue is not None and parent_issue != '':
-        resource = request_get_backlog_resources(f'/api/v2/issues/{parent_issue}')
-        parent_issue_id = resource['id']
-    if project_id is None:
-        warn(f'create: project not synced -- \'{project}\'')
-        return 1
-    if issue_type is not None and issue_type != '' and issue_type_id is None:
-        warn(f'create: unrecognized issue type -- \'{issue_type}\'')
-        return 1
-    if category is not None and category != '' and category_id is None:
-        warn(f'create: unrecognized category -- \'{category}\'')
-        return 1
-    if version is not None and version != '' and version_id is None:
-        warn(f'create: unrecognized version -- \'{version}\'')
-        return 1
-    if milestone is not None and milestone != '' and milestone_id is None:
-        warn(f'create: unrecognized milestone -- \'{milestone}\'')
-        return 1
-    if priority is not None and priority != '' and priority_id is None:
-        warn(f'create: unrecognized priority -- \'{priority}\'')
-        return 1
-    if status is not None and status != '' and status_id is None:
-        warn(f'create: unrecognized status -- \'{status}\'')
-        return 1
-    if resolution is not None and resolution != '' and resolution_id is None:
-        warn(f'create: unrecognized resolution -- \'{resolution}\'')
-        return 1
+    if summary == '':
+        raise PreconditionError('summary cannot be unset')
+    if issue_type == '':
+        raise PreconditionError('issue type cannot be unset')
+    if not (issue_type is None or issue_type == '') and recursive_get(resources, ['issueTypes', issue_type, 'id']) is None:
+        raise PreconditionError(f'unrecognized issue type \'{issue_type}\'')
+    if not (category is None or category == '') and recursive_get(resources, ['categories', category, 'id']) is None:
+        raise PreconditionError(f'unrecognized category \'{category}\'')
+    if not (version is None or version == '') and recursive_get(resources, ['versions', version, 'id']) is None:
+        raise PreconditionError(f'unrecognized version \'{version}\'')
+    if not (milestone is None or milestone == '') and recursive_get(resources, ['versions', milestone, 'id']) is None:
+        raise PreconditionError(f'unrecognized milestone \'{milestone}\'')
+    if priority == '':
+        raise PreconditionError('priority cannot be unset')
+    if not (priority is None or priority == '') and recursive_get(VIRTUAL_RESOURCES, ['priorities', priority, 'id']) is None:
+        raise PreconditionError(f'unrecognized priority \'{priority}\'')
+    if status == '':
+        raise PreconditionError('status cannot be unset')
+    if not (status is None or status == '') and recursive_get(resources, ['statuses', status, 'id']) is None:
+        raise PreconditionError(f'unrecognized status \'{status}\'')
+    if not (resolution is None or resolution == '') and recursive_get(VIRTUAL_RESOURCES, ['resolutions', resolution, 'id']) is None:
+        raise PreconditionError(f'unrecognized status \'{status}\'')
 
     params = {}
-    params['parentIssueId'] = parent_issue_id
-    params['summary'] = summary
-    params['description'] = description
-    params['startDate'] = start_date
-    params['dueDate'] = due_date
-    params['issueTypeId'] = issue_type_id
-    params['categoryId[]'] = category_id
-    params['versionId[]'] = version_id
-    params['milestoneId[]'] = milestone_id
-    params['priorityId'] = priority_id
-    params['statusId'] = status_id
-    params['resolutionId'] = resolution_id
-    params2 = {}
-    for param, value in params.items():
-        if value is not None:
-            params2[param] = value
+    if parent_issue is not None:
+        params['parentIssueId'] = '' if parent_issue == '' else request_get_backlog_resources(f'/api/v2/issues/{parent_issue}')['id']
+    if summary is not None:
+        params['summary'] = summary
+    if description is not None:
+        params['description'] = description
+    if start_date is not None:
+        params['startDate'] = '' if start_date == '' else today.strftime('%Y-%m-%d') if start_date == 'today' else start_date
+    if due_date is not None:
+        params['dueDate'] = '' if due_date == '' else today.strftime('%Y-%m-%d') if due_date == 'today' else due_date
+    if issue_type is not None:
+        params['issueTypeId'] = '' if issue_type == '' else recursive_get(resources, ['issueTypes', issue_type, 'id'])
+    if category is not None:
+        params['categoryId[]'] = '' if category == '' else recursive_get(resources, ['categories', category, 'id'])
+    if version is not None:
+        params['versionId[]'] = '' if version == '' else recursive_get(resources, ['versions', version, 'id'])
+    if milestone is not None:
+        params['milestoneId[]'] = '' if milestone == '' else recursive_get(resources, ['versions', milestone, 'id'])
+    if priority is not None:
+        params['priorityId'] = '' if priority == '' else recursive_get(VIRTUAL_RESOURCES, ['priorities', priority, 'id'])
+    if status is not None:
+        params['statusId'] = '' if status == '' else recursive_get(resources, ['statuses', status, 'id'])
+    if resolution is not None:
+        params['resolutionId'] = '' if resolution == '' else recursive_get(VIRTUAL_RESOURCES, ['resolutions', resolution, 'id'])
 
-    resource = request_post_backlog_resources(f'/api/v2/issues/{issue}', method='PATCH', params=params2)
+    resource = request_post_backlog_resources(f'/api/v2/issues/{issue}', method='PATCH', params=params)
     print(f'{resource['issueKey']} {resource['summary']}')
 
 
-def do_resource_sync(args):
+def do_resource_sync(args: argparse.Namespace):
     if BL_SPACE is None:
-        warn('resource: sync: BL_SPACE is not set')
-        return 1
+        raise PreconditionError('BL_SPACE is not set')
     if BL_API_KEY is None:
-        warn('resource: sync: BL_API_KEY is not set')
-        return 1
-
-    project = args.project or BL_PROJECT
-    if project is None:
-        warn('resource: sync: no input project')
-        return 1
+        raise PreconditionError('BL_API_KEY is not set')
 
     registry = load_registry()
 
-    set_default_item_recursive(registry, ['defaults', 'spaces', BL_SPACE, 'projects', project, 'create', 'parentIssue'], None)
-    set_default_item_recursive(registry, ['defaults', 'spaces', BL_SPACE, 'projects', project, 'create', 'startDate'], None)
-    set_default_item_recursive(registry, ['defaults', 'spaces', BL_SPACE, 'projects', project, 'create', 'dueDate'], None)
-    set_default_item_recursive(registry, ['defaults', 'spaces', BL_SPACE, 'projects', project, 'create', 'issueType'], None)
-    set_default_item_recursive(registry, ['defaults', 'spaces', BL_SPACE, 'projects', project, 'create', 'category'], None)
-    set_default_item_recursive(registry, ['defaults', 'spaces', BL_SPACE, 'projects', project, 'create', 'version'], None)
-    set_default_item_recursive(registry, ['defaults', 'spaces', BL_SPACE, 'projects', project, 'create', 'milestone'], None)
-    set_default_item_recursive(registry, ['defaults', 'spaces', BL_SPACE, 'projects', project, 'create', 'priority'], None)
+    project = args.project or BL_PROJECT
+    if project is None:
+        raise PreconditionError('no input project')
 
-    if get_item_recursive(registry, ['caches', 'spaces', BL_SPACE, 'users', 'myself', 'id']) is None:
+    recursive_set_default(registry, ['defaults', 'spaces', BL_SPACE, 'projects', project], {})
+    recursive_set_default(registry, ['resources', 'spaces', BL_SPACE, 'users'], {})
+    recursive_set_default(registry, ['resources', 'spaces', BL_SPACE, 'projects', project], {})
+    defaults = recursive_get(registry, ['defaults', 'spaces', BL_SPACE, 'projects', project], {})
+    users = recursive_get(registry, ['resources', 'spaces', BL_SPACE, 'users'], {})
+    resources = recursive_get(registry, ['resources', 'spaces', BL_SPACE, 'projects', project], {})
+
+    recursive_set_default(defaults, ['create', 'parentIssue'], None)
+    recursive_set_default(defaults, ['create', 'startDate'], None)
+    recursive_set_default(defaults, ['create', 'dueDate'], None)
+    recursive_set_default(defaults, ['create', 'issueType'], None)
+    recursive_set_default(defaults, ['create', 'category'], None)
+    recursive_set_default(defaults, ['create', 'version'], None)
+    recursive_set_default(defaults, ['create', 'milestone'], None)
+    recursive_set_default(defaults, ['create', 'priority'], None)
+    if recursive_get(users, ['myself', 'id']) is None:
         resource = request_get_backlog_resources('/api/v2/users/myself')
-        set_item_recursive(registry, ['caches', 'spaces', BL_SPACE, 'users', 'myself', 'id'], resource['id'])
-    if get_item_recursive(registry, ['caches', 'spaces', BL_SPACE, 'projects', project, 'id']) is None:
+        recursive_set(users, ['myself', 'id'], resource['id'])
+    if recursive_get(resources, ['id']) is None:
         resource = request_get_backlog_resources(f'/api/v2/projects/{project}')
-        set_item_recursive(registry, ['caches', 'spaces', BL_SPACE, 'projects', project, 'id'], resource['id'])
-    set_item_recursive(registry, ['caches', 'spaces', BL_SPACE, 'projects', project, 'issueTypes'], {})
-    set_item_recursive(registry, ['caches', 'spaces', BL_SPACE, 'projects', project, 'categories'], {})
-    set_item_recursive(registry, ['caches', 'spaces', BL_SPACE, 'projects', project, 'versions'], {})
-    set_item_recursive(registry, ['caches', 'spaces', BL_SPACE, 'projects', project, 'statuses'], {})
+        recursive_set(resources, ['id'], resource['id'])
+    recursive_set(resources, ['issueTypes'], {})
+    recursive_set(resources, ['categories'], {})
+    recursive_set(resources, ['versions'], {})
+    recursive_set(resources, ['statuses'], {})
     for resource in request_get_backlog_resources(f'/api/v2/projects/{project}/issueTypes'):
-        set_item_recursive(registry, ['caches', 'spaces', BL_SPACE, 'projects', project, 'issueTypes', resource['name']], {
-            'id': resource['id'],
-            'displayOrder': resource['displayOrder'],
-            'templateSummary': resource['templateSummary'],
-            'templateDescription': resource['templateDescription'],
-        })
+        recursive_set(resources, ['issueTypes', resource['name']], {'id': resource['id'], 'displayOrder': resource['displayOrder'], 'templateDescription': None if resource['templateDescription'] is None else resource['templateDescription'].replace('\r\n', '\n')})
     for resource in request_get_backlog_resources(f'/api/v2/projects/{project}/categories'):
-        set_item_recursive(registry, ['caches', 'spaces', BL_SPACE, 'projects', project, 'categories', resource['name']], {
-            'id': resource['id'],
-            'displayOrder': resource['displayOrder'],
-        })
+        recursive_set(resources, ['categories', resource['name']], {'id': resource['id'], 'displayOrder': resource['displayOrder']})
     for resource in request_get_backlog_resources(f'/api/v2/projects/{project}/versions'):
-        set_item_recursive(registry, ['caches', 'spaces', BL_SPACE, 'projects', project, 'versions', resource['name']], {
-            'id': resource['id'],
-            'displayOrder': resource['displayOrder'],
-        })
+        recursive_set(resources, ['versions', resource['name']], {'id': resource['id'], 'displayOrder': resource['displayOrder']})
     for resource in request_get_backlog_resources(f'/api/v2/projects/{project}/statuses'):
-        set_item_recursive(registry, ['caches', 'spaces', BL_SPACE, 'projects', project, 'statuses', resource['name']], {
-            'id': resource['id'],
-            'displayOrder': resource['displayOrder'],
-        })
+        recursive_set(resources, ['statuses', resource['name']], {'id': resource['id'], 'displayOrder': resource['displayOrder']})
 
     save_registry(registry)
 
 
-def do_resource_list(args):
+def do_resource_list(args: argparse.Namespace):
     resource_type = args.resource_type
     if resource_type is None:
-        warn('resource: list: no input resource type')
-        return 1
+        raise PreconditionError('no input resource type')
     if resource_type not in RESOURCE_TYPES:
-        warn(f'resource: list: unrecognized resource type \'{resource_type}\'')
-        return 1
+        raise PreconditionError(f'unrecognized resource type \'{resource_type}\'')
 
     resource_names = []
     if resource_type in VIRTUAL_RESOURCES:
-        resource_names = VIRTUAL_RESOURCES[resource_type].keys()
+        resource_names = list(VIRTUAL_RESOURCES[resource_type].keys())
     elif resource_type == 'spaces':
         registry = load_registry()
-        resource_names = get_item_recursive(registry, ['caches', 'spaces'], {}).keys()
+        resource_names = recursive_get(registry, ['resources', 'spaces'], {}).keys()
     elif resource_type == 'projects':
         if BL_SPACE is None:
-            warn('resource: list: BL_SPACE is not set')
-            return 1
+            raise PreconditionError('BL_SPACE is not set')
         registry = load_registry()
-        resource_names = get_item_recursive(registry, ['caches', 'spaces', BL_SPACE, 'projects'], {}).keys()
+        resource_names = recursive_get(registry, ['resources', 'spaces', BL_SPACE, 'projects'], {}).keys()
     else:
         if BL_SPACE is None:
-            warn('resource: list: BL_SPACE is not set')
-            return 1
+            raise PreconditionError('BL_SPACE is not set')
         project = args.project or BL_PROJECT
         if project is None:
-            warn('resource: list: no input project')
-            return 1
+            raise PreconditionError('no input project')
         registry = load_registry()
-        resources = get_item_recursive(registry, ['caches', 'spaces', BL_SPACE, 'projects', project, resource_type], {})
+        resources = recursive_get(registry, ['resources', 'spaces', BL_SPACE, 'projects', project, resource_type], {})
         resource_names = sorted(resources.keys(), key=lambda key: resources[key]['displayOrder'])
 
     for resource_name in resource_names:
@@ -831,36 +779,33 @@ def do_resource_list(args):
     return 0
 
 
-def do_configure(args):
-    editor = os.getenv('EDITOR')
-    if editor is None:
-        warn('configure: EDITOR is not set')
-        return 1
+def do_configure(args: argparse.Namespace):
+    if os.getenv('EDITOR') is None:
+        raise PreconditionError('EDITOR is not set')
 
-    subprocess.run(f'{editor} {BL_REGISTRY}', shell=True)
+    env = os.environ.copy()
+    env['BL_REGISTRY'] = BL_REGISTRY
+    subprocess.run('$EDITOR "$BL_REGISTRY"', shell=True, env=env)
     return 0
 
 
-def do_completion(args):
+def do_completion(args: argparse.Namespace):
     shell = args.shell
     if shell is None:
-        warn('completion: no input shell')
-        return 1
+        raise PreconditionError('no input shell')
     if shell not in SHELL_COMPLETION_SCRIPTS:
-        warn(f'completion: unrecognized shell \'{shell}\'')
-        return 1
+        raise PreconditionError(f'unrecognized shell \'{shell}\'')
 
     print(SHELL_COMPLETION_SCRIPTS[shell])
     return 0
 
 
-def do_help(args):
-    command = '-'.join(args.help_command) if len(args.help_command) >= 1 else None
-    if command is not None and command not in SUBCMD_USAGE:
-        warn(f'help: unrecognized command \'{command}\'')
-        return 1
+def do_help(args: argparse.Namespace):
+    command = '-'.join(args.help_command)
+    if command != '' and command not in SUBCMD_USAGE:
+        raise PreconditionError(f'unrecognized command \'{command}\'')
 
-    if command is None:
+    if command == '':
         print(CMD_USAGE)
     else:
         print(SUBCMD_USAGE[command])
@@ -950,8 +895,11 @@ def main():
 
         exitcode = args.handler(args)
         return sys.exit(exitcode)
-    except argparse.ArgumentError as e:
+    except (argparse.ArgumentError, PreconditionError) as e:
         warn(e)
+        return sys.exit(1)
+    except urllib.error.HTTPError as e:
+        warn('error response: ' + e.read().decode('utf-8'))
         return sys.exit(1)
 
 
