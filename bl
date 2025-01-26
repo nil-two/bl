@@ -238,166 +238,173 @@ _bl() {
     statuses
     resolutions
   )
-  local supported_shells=(
+  local shells=(
     bash
     fish
   )
 
-  case $cword in
-    1)
-      $split && return
-      case $cur in
-        -*)
-          COMPREPLY=( $(compgen -W '"${options[@]}"' -- "$cur") )
-          ;;
-        *)
-          COMPREPLY=( $(compgen -W '"${commands[@]}"' -- "$cur") )
-          ;;
-      esac
-      ;;
-    *)
-      case ${words[1]} in
-        create)
-          case $prev in
-            -p|--project)
-              IFS=$'\\n'; COMPREPLY=( $(compgen -W '$(bl resource list projects)' -- "$cur") ); IFS=$defaultIFS
-              ;;
-            -t|--issue-type)
-              IFS=$'\\n'; COMPREPLY=( $(compgen -W '$(bl resource list issueTypes)' -- "$cur") ); IFS=$defaultIFS
-              [[ ! $cur =~ ^[\\'\\"] ]] && COMPREPLY=( "${COMPREPLY[@]// /\\\\ }" )
-              ;;
-            -c|--category)
-              IFS=$'\\n'; COMPREPLY=( $(compgen -W '$(bl resource list categories)' -- "$cur") ); IFS=$defaultIFS
-              [[ ! $cur =~ ^[\\'\\"] ]] && COMPREPLY=( "${COMPREPLY[@]// /\\\\ }" )
-              ;;
-            -v|--version)
-              IFS=$'\\n'; COMPREPLY=( $(compgen -W '$(bl resource list versions)' -- "$cur") ); IFS=$defaultIFS
-              [[ ! $cur =~ ^[\\'\\"] ]] && COMPREPLY=( "${COMPREPLY[@]// /\\\\ }" )
-              ;;
-            -m|--milestone)
-              IFS=$'\\n'; COMPREPLY=( $(compgen -W '$(bl resource list versions)' -- "$cur") ); IFS=$defaultIFS
-              [[ ! $cur =~ ^[\\'\\"] ]] && COMPREPLY=( "${COMPREPLY[@]// /\\\\ }" )
-              ;;
-            -P|--priority)
-              IFS=$'\\n'; COMPREPLY=( $(compgen -W '$(bl resource list priorities)' -- "$cur") ); IFS=$defaultIFS
-              [[ ! $cur =~ ^[\\'\\"] ]] && COMPREPLY=( "${COMPREPLY[@]// /\\\\ }" )
-              ;;
-          esac
-          $split && return
-          COMPREPLY=( $(compgen -W '"${create_options[@]}"' -- "$cur") )
-          ;;
-        update)
-          case $prev in
-            -t|--issue-type)
-              IFS=$'\\n'; COMPREPLY=( $(compgen -W '$(bl resource list issueTypes)' -- "$cur") ); IFS=$defaultIFS
-              [[ ! $cur =~ ^[\\'\\"] ]] && COMPREPLY=( "${COMPREPLY[@]// /\\\\ }" )
-              ;;
-            -c|--category)
-              IFS=$'\\n'; COMPREPLY=( $(compgen -W '$(bl resource list categories)' -- "$cur") ); IFS=$defaultIFS
-              [[ ! $cur =~ ^[\\'\\"] ]] && COMPREPLY=( "${COMPREPLY[@]// /\\\\ }" )
-              ;;
-            -v|--version)
-              IFS=$'\\n'; COMPREPLY=( $(compgen -W '$(bl resource list versions)' -- "$cur") ); IFS=$defaultIFS
-              [[ ! $cur =~ ^[\\'\\"] ]] && COMPREPLY=( "${COMPREPLY[@]// /\\\\ }" )
-              ;;
-            -m|--milestone)
-              IFS=$'\\n'; COMPREPLY=( $(compgen -W '$(bl resource list versions)' -- "$cur") ); IFS=$defaultIFS
-              [[ ! $cur =~ ^[\\'\\"] ]] && COMPREPLY=( "${COMPREPLY[@]// /\\\\ }" )
-              ;;
-            -P|--priority)
-              IFS=$'\\n'; COMPREPLY=( $(compgen -W '$(bl resource list priorities)' -- "$cur") ); IFS=$defaultIFS
-              [[ ! $cur =~ ^[\\'\\"] ]] && COMPREPLY=( "${COMPREPLY[@]// /\\\\ }" )
-              ;;
-            -T|--status)
-              IFS=$'\\n'; COMPREPLY=( $(compgen -W '$(bl resource list statuses)' -- "$cur") ); IFS=$defaultIFS
-              [[ ! $cur =~ ^[\\'\\"] ]] && COMPREPLY=( "${COMPREPLY[@]// /\\\\ }" )
-              ;;
-            -r|--resolution)
-              IFS=$'\\n'; COMPREPLY=( $(compgen -W '$(bl resource list resolutions)' -- "$cur") ); IFS=$defaultIFS
-              [[ ! $cur =~ ^[\\'\\"] ]] && COMPREPLY=( "${COMPREPLY[@]// /\\\\ }" )
-              ;;
-          esac
-          $split && return
-          COMPREPLY=( $(compgen -W '"${update_options[@]}"' -- "$cur") )
-          ;;
-        resource)
-          case $cword in
-            2)
-              $split && return
-              COMPREPLY=( $(compgen -W '"${resource_commands[@]}"' -- "$cur") )
-              ;;
-            *)
-              case ${words[2]} in
-                sync)
-                  case $prev in
-                    -p|--project)
-                      IFS=$'\\n'; COMPREPLY=( $(compgen -W '$(bl resource list projects)' -- "$cur") ); IFS=$defaultIFS
-                      ;;
-                  esac
-                  $split && return
-                  COMPREPLY=( $(compgen -W '"${resource_sync_options[@]}"' -- "$cur") )
-                  ;;
-                list)
-                  case $prev in
-                    -p|--project)
-                      IFS=$'\\n'; COMPREPLY=( $(compgen -W '$(bl resource list projects)' -- "$cur") ); IFS=$defaultIFS
-                      ;;
-                  esac
-                  $split && return
-                  case $cur in
-                    -*)
-                      COMPREPLY=( $(compgen -W '"${resource_list_options[@]}"' -- "$cur") )
-                      ;;
-                    *)
-                      COMPREPLY=( $(compgen -W '"${resource_types[@]}"' -- "$cur") )
-                      ;;
-                  esac
-                  ;;
-              esac
-              ;;
-          esac
-          ;;
-        configure)
-          $split && return
-          COMPREPLY=( $(compgen -W '"${configure_options[@]}"' -- "$cur") )
-          ;;
-        completion)
-          $split && return
-          case $cur in
-            -*)
-              COMPREPLY=( $(compgen -W '"${completion_options[@]}"' -- "$cur") )
-              ;;
-            *)
-              COMPREPLY=( $(compgen -W '"${supported_shells[@]}"' -- "$cur") )
-              ;;
-          esac
-          ;;
-        help)
-          $split && return
-          case $cur in
-            -*)
-              COMPREPLY=( $(compgen -W '"${help_options[@]}"' -- "$cur") )
-              ;;
-            *)
-              case $cword in
-                2)
-                  COMPREPLY=( $(compgen -W '"${commands[@]}"' -- "$cur") )
-                  ;;
-                3)
-                  case ${words[2]} in
-                    resource)
-                      COMPREPLY=( $(compgen -W '"${resource_commands[@]}"' -- "$cur") )
-                      ;;
-                  esac
-                  ;;
-              esac
-              ;;
-          esac
-          ;;
-      esac
-      ;;
-  esac
+  while true; do
+    case $cword in
+      1)
+        $split && break
+        case $cur in
+          -*)
+            COMPREPLY=( $(compgen -W '"${options[@]}"' -- "$cur") )
+            ;;
+          *)
+            COMPREPLY=( $(compgen -W '"${commands[@]}"' -- "$cur") )
+            ;;
+        esac
+        ;;
+      *)
+        case ${words[1]} in
+          create)
+            case $prev in
+              -p|--project)
+                IFS=$'\\n'; COMPREPLY=( $(compgen -W '$(bl resource list projects)' -- "$cur") ); IFS=$defaultIFS
+                break
+                ;;
+              -t|--issue-type)
+                IFS=$'\\n'; COMPREPLY=( $(compgen -W '$(bl resource list issueTypes)' -- "$cur") ); IFS=$defaultIFS
+                break
+                ;;
+              -c|--category)
+                IFS=$'\\n'; COMPREPLY=( $(compgen -W '$(bl resource list categories)' -- "$cur") ); IFS=$defaultIFS
+                break
+                ;;
+              -v|--version)
+                IFS=$'\\n'; COMPREPLY=( $(compgen -W '$(bl resource list versions)' -- "$cur") ); IFS=$defaultIFS
+                break
+                ;;
+              -m|--milestone)
+                IFS=$'\\n'; COMPREPLY=( $(compgen -W '$(bl resource list versions)' -- "$cur") ); IFS=$defaultIFS
+                break
+                ;;
+              -P|--priority)
+                IFS=$'\\n'; COMPREPLY=( $(compgen -W '$(bl resource list priorities)' -- "$cur") ); IFS=$defaultIFS
+                break
+                ;;
+            esac
+            $split && break
+            COMPREPLY=( $(compgen -W '"${create_options[@]}"' -- "$cur") )
+            ;;
+          update)
+            case $prev in
+              -t|--issue-type)
+                IFS=$'\\n'; COMPREPLY=( $(compgen -W '$(bl resource list issueTypes)' -- "$cur") ); IFS=$defaultIFS
+                break
+                ;;
+              -c|--category)
+                IFS=$'\\n'; COMPREPLY=( $(compgen -W '$(bl resource list categories)' -- "$cur") ); IFS=$defaultIFS
+                break
+                ;;
+              -v|--version)
+                IFS=$'\\n'; COMPREPLY=( $(compgen -W '$(bl resource list versions)' -- "$cur") ); IFS=$defaultIFS
+                break
+                ;;
+              -m|--milestone)
+                IFS=$'\\n'; COMPREPLY=( $(compgen -W '$(bl resource list versions)' -- "$cur") ); IFS=$defaultIFS
+                break
+                ;;
+              -P|--priority)
+                IFS=$'\\n'; COMPREPLY=( $(compgen -W '$(bl resource list priorities)' -- "$cur") ); IFS=$defaultIFS
+                break
+                ;;
+              -T|--status)
+                IFS=$'\\n'; COMPREPLY=( $(compgen -W '$(bl resource list statuses)' -- "$cur") ); IFS=$defaultIFS
+                break
+                ;;
+              -r|--resolution)
+                IFS=$'\\n'; COMPREPLY=( $(compgen -W '$(bl resource list resolutions)' -- "$cur") ); IFS=$defaultIFS
+                break
+                ;;
+            esac
+            $split && break
+            COMPREPLY=( $(compgen -W '"${update_options[@]}"' -- "$cur") )
+            ;;
+          resource)
+            case $cword in
+              2)
+                $split && break
+                COMPREPLY=( $(compgen -W '"${resource_commands[@]}"' -- "$cur") )
+                ;;
+              *)
+                case ${words[2]} in
+                  sync)
+                    case $prev in
+                      -p|--project)
+                        IFS=$'\\n'; COMPREPLY=( $(compgen -W '$(bl resource list projects)' -- "$cur") ); IFS=$defaultIFS
+                        break
+                        ;;
+                    esac
+                    $split && break
+                    COMPREPLY=( $(compgen -W '"${resource_sync_options[@]}"' -- "$cur") )
+                    ;;
+                  list)
+                    case $prev in
+                      -p|--project)
+                        IFS=$'\\n'; COMPREPLY=( $(compgen -W '$(bl resource list projects)' -- "$cur") ); IFS=$defaultIFS
+                        break
+                        ;;
+                    esac
+                    $split && break
+                    case $cur in
+                      -*)
+                        COMPREPLY=( $(compgen -W '"${resource_list_options[@]}"' -- "$cur") )
+                        ;;
+                      *)
+                        COMPREPLY=( $(compgen -W '"${resource_types[@]}"' -- "$cur") )
+                        ;;
+                    esac
+                    ;;
+                esac
+                ;;
+            esac
+            ;;
+          configure)
+            $split && break
+            COMPREPLY=( $(compgen -W '"${configure_options[@]}"' -- "$cur") )
+            ;;
+          completion)
+            $split && break
+            case $cur in
+              -*)
+                COMPREPLY=( $(compgen -W '"${completion_options[@]}"' -- "$cur") )
+                ;;
+              *)
+                COMPREPLY=( $(compgen -W '"${shells[@]}"' -- "$cur") )
+                ;;
+            esac
+            ;;
+          help)
+            $split && break
+            case $cur in
+              -*)
+                COMPREPLY=( $(compgen -W '"${help_options[@]}"' -- "$cur") )
+                ;;
+              *)
+                case $cword in
+                  2)
+                    COMPREPLY=( $(compgen -W '"${commands[@]}"' -- "$cur") )
+                    ;;
+                  3)
+                    case ${words[2]} in
+                      resource)
+                        COMPREPLY=( $(compgen -W '"${resource_commands[@]}"' -- "$cur") )
+                        ;;
+                    esac
+                    ;;
+                esac
+                ;;
+            esac
+            ;;
+        esac
+        ;;
+    esac
+    break
+  done
   [[ $COMPREPLY == *= ]] && compopt -o nospace
+  [[ ! $cur =~ ^[\\'\\"] ]] && COMPREPLY=( "${COMPREPLY[@]// /\\\\ }" )
 }
 complete -F _bl bl
 '''.strip()
@@ -434,14 +441,14 @@ complete -c bl -n '__fish_seen_subcommand_from update' -s P -l priority -xa '(bl
 complete -c bl -n '__fish_seen_subcommand_from update' -s T -l status -xa '(bl resource list statuses)' -d 'Issue status'
 complete -c bl -n '__fish_seen_subcommand_from update' -s r -l resolution -xa '(bl resource list resolutions)' -d 'Issue resolution'
 complete -c bl -n '__fish_seen_subcommand_from update' -s h -l help -d 'Print usage and exit'
-complete -c bl -n '__fish_use_subcommand' -xa resource -d 'Manage Backlog resources'
+complete -c bl -n '__fish_use_subcommand' -xa resource -d 'Handle Backlog resources'
 complete -c bl -n '__fish_seen_subcommand_from resource; and not __fish_seen_subcommand_from sync list' -xa sync -d 'Sync Backlog resources to caches'
-complete -c bl -n '__fish_seen_subcommand_from resource; and __fish_seen_subcommand_from sync' -s p -l project -xa '(bl resource list projects)' -d 'Create issue on PROJECT'
+complete -c bl -n '__fish_seen_subcommand_from resource; and __fish_seen_subcommand_from sync' -s p -l project -xa '(bl resource list projects)' -d 'Sync resource caches of PROJECT'
 complete -c bl -n '__fish_seen_subcommand_from resource; and __fish_seen_subcommand_from sync' -s h -l help -d 'Print usage and exit'
 complete -c bl -n '__fish_seen_subcommand_from resource; and not __fish_seen_subcommand_from sync list' -xa list -d 'List Backlog resources from caches'
-complete -c bl -n '__fish_seen_subcommand_from resource; and __fish_seen_subcommand_from list' -s p -l project -xa '(bl resource list projects)' -d 'Create issue on PROJECT'
+complete -c bl -n '__fish_seen_subcommand_from resource; and __fish_seen_subcommand_from list' -s p -l project -xa '(bl resource list projects)' -d 'List resource caches of PROJECT'
 complete -c bl -n '__fish_seen_subcommand_from resource; and __fish_seen_subcommand_from list' -s h -l help -d 'Print usage and exit'
-complete -c bl -n '__fish_seen_subcommand_from resource; and __fish_seen_subcommand_from list' -xa 'spaces projects issueTypes categories versions priorities statuses resolutions' -d 'Resource_type'
+complete -c bl -n '__fish_seen_subcommand_from resource; and __fish_seen_subcommand_from list' -xa 'spaces projects issueTypes categories versions priorities statuses resolutions' -d 'Resource type'
 complete -c bl -n '__fish_use_subcommand' -xa configure -d 'Edit config'
 complete -c bl -n '__fish_seen_subcommand_from completion' -s h -l help -d 'Print usage and exit'
 complete -c bl -n '__fish_use_subcommand' -xa completion -d 'Print evaluatable completion script'
@@ -449,13 +456,14 @@ complete -c bl -n '__fish_seen_subcommand_from completion' -s h -l help -d 'Prin
 complete -c bl -n '__fish_seen_subcommand_from completion' -xa 'bash fish' -d 'Shell'
 complete -c bl -n '__fish_use_subcommand' -xa help -d 'Print usage and exit'
 complete -c bl -n '__fish_seen_subcommand_from help; and not __fish_seen_subcommand_from resource' -s h -l help -d 'Print usage and exit'
-complete -c bl -n '__fish_seen_subcommand_from help; and not __fish_seen_subcommand_from resource' -xa create -d 'Create Backlog issue'
-complete -c bl -n '__fish_seen_subcommand_from help; and not __fish_seen_subcommand_from resource' -xa update -d 'Update Backlog issue'
-complete -c bl -n '__fish_seen_subcommand_from help; and not __fish_seen_subcommand_from resource' -xa resource -d 'Manage Backlog resources'
-complete -c bl -n '__fish_seen_subcommand_from help; and __fish_seen_subcommand_from resource' -xa sync -d 'Sync Backlog resources to caches'
-complete -c bl -n '__fish_seen_subcommand_from help; and __fish_seen_subcommand_from resource' -xa list -d 'List Backlog resources from caches'
-complete -c bl -n '__fish_seen_subcommand_from help; and not __fish_seen_subcommand_from resource' -xa completion -d 'Print evaluatable completion script'
-complete -c bl -n '__fish_seen_subcommand_from help; and not __fish_seen_subcommand_from resource' -xa help -d 'Print usage and exit'
+complete -c bl -n '__fish_seen_subcommand_from help; and not __fish_seen_subcommand_from resource' -xa create -d 'Command'
+complete -c bl -n '__fish_seen_subcommand_from help; and not __fish_seen_subcommand_from resource' -xa update -d 'Command'
+complete -c bl -n '__fish_seen_subcommand_from help; and not __fish_seen_subcommand_from resource' -xa resource -d 'Command'
+complete -c bl -n '__fish_seen_subcommand_from help; and __fish_seen_subcommand_from resource' -xa sync -d 'Command'
+complete -c bl -n '__fish_seen_subcommand_from help; and __fish_seen_subcommand_from resource' -xa list -d 'Command'
+complete -c bl -n '__fish_seen_subcommand_from help; and not __fish_seen_subcommand_from resource' -xa configure -d 'Command'
+complete -c bl -n '__fish_seen_subcommand_from help; and not __fish_seen_subcommand_from resource' -xa completion -d 'Command'
+complete -c bl -n '__fish_seen_subcommand_from help; and not __fish_seen_subcommand_from resource' -xa help -d 'Command'
 '''.strip()
 # embed:end:completion
 
