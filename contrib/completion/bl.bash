@@ -79,6 +79,7 @@ _bl() {
   )
   local shells=(
     bash
+    zsh
     fish
   )
 
