@@ -68,6 +68,7 @@ _bl() {
     --help
   )
   local resource_types=(
+    spaces
     projects
     issueTypes
     categories

@@ -35,7 +35,7 @@ complete -c bl -n '__fish_seen_subcommand_from resource; and __fish_seen_subcomm
 complete -c bl -n '__fish_seen_subcommand_from resource; and not __fish_seen_subcommand_from sync list' -xa list -d 'List Backlog resources from caches'
 complete -c bl -n '__fish_seen_subcommand_from resource; and __fish_seen_subcommand_from list' -s p -l project -xa '(bl resource list projects)' -d 'Create issue on PROJECT'
 complete -c bl -n '__fish_seen_subcommand_from resource; and __fish_seen_subcommand_from list' -s h -l help -d 'Print usage and exit'
-complete -c bl -n '__fish_seen_subcommand_from resource; and __fish_seen_subcommand_from list' -xa 'projects issueTypes categories versions priorities statuses resolutions' -d 'Resource_type'
+complete -c bl -n '__fish_seen_subcommand_from resource; and __fish_seen_subcommand_from list' -xa 'spaces projects issueTypes categories versions priorities statuses resolutions' -d 'Resource_type'
 complete -c bl -n '__fish_use_subcommand' -xa configure -d 'Edit config'
 complete -c bl -n '__fish_seen_subcommand_from completion' -s h -l help -d 'Print usage and exit'
 complete -c bl -n '__fish_use_subcommand' -xa completion -d 'Print evaluatable completion script'
