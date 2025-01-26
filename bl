@@ -740,13 +740,26 @@ def do_resource_sync(args: argparse.Namespace):
     recursive_set(resources, ['versions'], {})
     recursive_set(resources, ['statuses'], {})
     for resource in request_get_backlog_resources(f'/api/v2/projects/{project}/issueTypes'):
-        recursive_set(resources, ['issueTypes', resource['name']], {'id': resource['id'], 'displayOrder': resource['displayOrder'], 'templateDescription': None if resource['templateDescription'] is None else resource['templateDescription'].replace('\r\n', '\n')})
+        recursive_set(resources, ['issueTypes', resource['name']], {
+            'id': resource['id'],
+            'displayOrder': resource['displayOrder'],
+            'templateDescription': resource['templateDescription'].replace('\r\n', '\n') if resource['templateDescription'] is not None else None,
+        })
     for resource in request_get_backlog_resources(f'/api/v2/projects/{project}/categories'):
-        recursive_set(resources, ['categories', resource['name']], {'id': resource['id'], 'displayOrder': resource['displayOrder']})
+        recursive_set(resources, ['categories', resource['name']], {
+            'id': resource['id'],
+            'displayOrder': resource['displayOrder'],
+        })
     for resource in request_get_backlog_resources(f'/api/v2/projects/{project}/versions'):
-        recursive_set(resources, ['versions', resource['name']], {'id': resource['id'], 'displayOrder': resource['displayOrder']})
+        recursive_set(resources, ['versions', resource['name']], {
+            'id': resource['id'],
+            'displayOrder': resource['displayOrder'],
+        })
     for resource in request_get_backlog_resources(f'/api/v2/projects/{project}/statuses'):
-        recursive_set(resources, ['statuses', resource['name']], {'id': resource['id'], 'displayOrder': resource['displayOrder']})
+        recursive_set(resources, ['statuses', resource['name']], {
+            'id': resource['id'],
+            'displayOrder': resource['displayOrder'],
+        })
 
     save_registry(registry)
 
