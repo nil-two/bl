@@ -134,7 +134,11 @@ _bl() {
                 ;;
             esac
             $split && break
-            COMPREPLY=( $(compgen -W '"${create_options[@]}"' -- "$cur") )
+            case $cur in
+              -*)
+                COMPREPLY=( $(compgen -W '"${create_options[@]}"' -- "$cur") )
+                ;;
+            esac
             ;;
           update)
             case $prev in
@@ -168,21 +172,37 @@ _bl() {
                 ;;
             esac
             $split && break
-            COMPREPLY=( $(compgen -W '"${update_options[@]}"' -- "$cur") )
+            case $cur in
+              -*)
+                COMPREPLY=( $(compgen -W '"${update_options[@]}"' -- "$cur") )
+                ;;
+            esac
             ;;
           edit)
             $split && break
-            COMPREPLY=( $(compgen -W '"${edit_options[@]}"' -- "$cur") )
+            case $cur in
+              -*)
+                COMPREPLY=( $(compgen -W '"${edit_options[@]}"' -- "$cur") )
+                ;;
+            esac
             ;;
           show)
             $split && break
-            COMPREPLY=( $(compgen -W '"${show_options[@]}"' -- "$cur") )
+            case $cur in
+              -*)
+                COMPREPLY=( $(compgen -W '"${show_options[@]}"' -- "$cur") )
+                ;;
+            esac
             ;;
           resource)
             case $cword in
               2)
                 $split && break
-                COMPREPLY=( $(compgen -W '"${resource_commands[@]}"' -- "$cur") )
+                case $cur in
+                  -*)
+                    COMPREPLY=( $(compgen -W '"${resource_commands[@]}"' -- "$cur") )
+                    ;;
+                esac
                 ;;
               *)
                 case ${words[2]} in
@@ -194,7 +214,11 @@ _bl() {
                         ;;
                     esac
                     $split && break
-                    COMPREPLY=( $(compgen -W '"${resource_sync_options[@]}"' -- "$cur") )
+                    case $cur in
+                      -*)
+                        COMPREPLY=( $(compgen -W '"${resource_sync_options[@]}"' -- "$cur") )
+                        ;;
+                    esac
                     ;;
                   list)
                     case $prev in
@@ -219,7 +243,11 @@ _bl() {
             ;;
           configure)
             $split && break
-            COMPREPLY=( $(compgen -W '"${configure_options[@]}"' -- "$cur") )
+            case $cur in
+              -*)
+                COMPREPLY=( $(compgen -W '"${configure_options[@]}"' -- "$cur") )
+                ;;
+            esac
             ;;
           completion)
             $split && break
@@ -236,7 +264,11 @@ _bl() {
             $split && break
             case $cur in
               -*)
-                COMPREPLY=( $(compgen -W '"${help_options[@]}"' -- "$cur") )
+                case $cur in
+                  -*)
+                    COMPREPLY=( $(compgen -W '"${help_options[@]}"' -- "$cur") )
+                    ;;
+                esac
                 ;;
               *)
                 case $cword in
