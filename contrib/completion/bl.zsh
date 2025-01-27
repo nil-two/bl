@@ -3,6 +3,8 @@ _bl() {
   local commands=(
     'create:create Backlog issue'
     'update:update Backlog issue'
+    'edit:edit Backlog issue'
+    'show:show Backlog issue'
     'resource:handle Backlog resources'
     'configure:edit config'
     'completion:print evaluatable completion script'
@@ -125,6 +127,16 @@ _bl() {
               _describe -t 'resolutions' 'resolution' resolutions
               ;;
           esac
+          ;;
+        edit)
+          _arguments -C -S -s \
+            '(-h --help)'{-h,--help}'[print usage and exit]' \
+            '1:issue:'
+          ;;
+        show)
+          _arguments -C -S -s \
+            '(-h --help)'{-h,--help}'[print usage and exit]' \
+            '1:issue:'
           ;;
         resource)
           _arguments -C -S -s \

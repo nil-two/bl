@@ -8,6 +8,8 @@ _bl() {
   local commands=(
     create
     update
+    edit
+    show
     resource
     configure
     completion
@@ -48,6 +50,12 @@ _bl() {
     --priority=
     --status=
     --resolution=
+    --help
+  )
+  local edit_options=(
+    --help
+  )
+  local show_options=(
     --help
   )
   local resource_sync_options=(
@@ -161,6 +169,14 @@ _bl() {
             esac
             $split && break
             COMPREPLY=( $(compgen -W '"${update_options[@]}"' -- "$cur") )
+            ;;
+          edit)
+            $split && break
+            COMPREPLY=( $(compgen -W '"${edit_options[@]}"' -- "$cur") )
+            ;;
+          show)
+            $split && break
+            COMPREPLY=( $(compgen -W '"${show_options[@]}"' -- "$cur") )
             ;;
           resource)
             case $cword in

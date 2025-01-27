@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 import argparse
+import tempfile
 import datetime
 import json
 import os
@@ -26,6 +27,8 @@ handle Backlog service.
 commands:
   bl create         # create Backlog issue
   bl update         # update Backlog issue
+  bl edit           # edit Backlog issue
+  bl show           # show Backlog issue
   bl resource sync  # sync Backlog resources to caches
   bl resource list  # list Backlog resources from caches
   bl configure      # edit config
@@ -79,6 +82,20 @@ options:
   -T, --status=STATUS            issue status
   -r, --resolution=RESOLUTION    issue resolution
   -h, --help                     print usage and exit
+'''.strip()
+SUBCMD_USAGE['edit'] = '''
+usage: bl edit [<option(s)>] <issue>
+edit Backlog issue.
+
+options:
+  -h, --help  print usage and exit
+'''.strip()
+SUBCMD_USAGE['show'] = '''
+usage: bl show [<option(s)>] <issue>
+show Backlog issue.
+
+options:
+  -h, --help  print usage and exit
 '''.strip()
 SUBCMD_USAGE['resource-sync'] = '''
 usage: bl resource sync [<option(s)>]
@@ -170,6 +187,8 @@ _bl() {
   local commands=(
     create
     update
+    edit
+    show
     resource
     configure
     completion
@@ -210,6 +229,12 @@ _bl() {
     --priority=
     --status=
     --resolution=
+    --help
+  )
+  local edit_options=(
+    --help
+  )
+  local show_options=(
     --help
   )
   local resource_sync_options=(
@@ -324,6 +349,14 @@ _bl() {
             $split && break
             COMPREPLY=( $(compgen -W '"${update_options[@]}"' -- "$cur") )
             ;;
+          edit)
+            $split && break
+            COMPREPLY=( $(compgen -W '"${edit_options[@]}"' -- "$cur") )
+            ;;
+          show)
+            $split && break
+            COMPREPLY=( $(compgen -W '"${show_options[@]}"' -- "$cur") )
+            ;;
           resource)
             case $cword in
               2)
@@ -418,6 +451,8 @@ _bl() {
   local commands=(
     'create:create Backlog issue'
     'update:update Backlog issue'
+    'edit:edit Backlog issue'
+    'show:show Backlog issue'
     'resource:handle Backlog resources'
     'configure:edit config'
     'completion:print evaluatable completion script'
@@ -541,6 +576,16 @@ _bl() {
               ;;
           esac
           ;;
+        edit)
+          _arguments -C -S -s \\
+            '(-h --help)'{-h,--help}'[print usage and exit]' \\
+            '1:issue:'
+          ;;
+        show)
+          _arguments -C -S -s \\
+            '(-h --help)'{-h,--help}'[print usage and exit]' \\
+            '1:issue:'
+          ;;
         resource)
           _arguments -C -S -s \\
             '1: :->resource_command' \\
@@ -659,6 +704,10 @@ complete -c bl -n '__fish_seen_subcommand_from update' -s P -l priority -xa '(bl
 complete -c bl -n '__fish_seen_subcommand_from update' -s T -l status -xa '(bl resource list statuses)' -d 'Issue status'
 complete -c bl -n '__fish_seen_subcommand_from update' -s r -l resolution -xa '(bl resource list resolutions)' -d 'Issue resolution'
 complete -c bl -n '__fish_seen_subcommand_from update' -s h -l help -d 'Print usage and exit'
+complete -c bl -n '__fish_use_subcommand' -xa edit -d 'Edit Backlog issue'
+complete -c bl -n '__fish_seen_subcommand_from edit' -s h -l help -d 'Print usage and exit'
+complete -c bl -n '__fish_use_subcommand' -xa show -d 'Show Backlog issue'
+complete -c bl -n '__fish_seen_subcommand_from show' -s h -l help -d 'Print usage and exit'
 complete -c bl -n '__fish_use_subcommand' -xa resource -d 'Handle Backlog resources'
 complete -c bl -n '__fish_seen_subcommand_from resource; and not __fish_seen_subcommand_from sync list' -xa sync -d 'Sync Backlog resources to caches'
 complete -c bl -n '__fish_seen_subcommand_from resource; and __fish_seen_subcommand_from sync' -s p -l project -xa '(bl resource list projects)' -d 'Sync resource caches of PROJECT'
@@ -676,6 +725,8 @@ complete -c bl -n '__fish_use_subcommand' -xa help -d 'Print usage and exit'
 complete -c bl -n '__fish_seen_subcommand_from help; and not __fish_seen_subcommand_from resource' -s h -l help -d 'Print usage and exit'
 complete -c bl -n '__fish_seen_subcommand_from help; and not __fish_seen_subcommand_from resource' -xa create -d 'Command'
 complete -c bl -n '__fish_seen_subcommand_from help; and not __fish_seen_subcommand_from resource' -xa update -d 'Command'
+complete -c bl -n '__fish_seen_subcommand_from help; and not __fish_seen_subcommand_from resource' -xa edit -d 'Command'
+complete -c bl -n '__fish_seen_subcommand_from help; and not __fish_seen_subcommand_from resource' -xa show -d 'Command'
 complete -c bl -n '__fish_seen_subcommand_from help; and not __fish_seen_subcommand_from resource' -xa resource -d 'Command'
 complete -c bl -n '__fish_seen_subcommand_from help; and __fish_seen_subcommand_from resource' -xa sync -d 'Command'
 complete -c bl -n '__fish_seen_subcommand_from help; and __fish_seen_subcommand_from resource' -xa list -d 'Command'
@@ -928,6 +979,48 @@ def do_update(args: argparse.Namespace):
     print(f'{resource['issueKey']} {resource['summary']}')
 
 
+def do_show(args: argparse.Namespace):
+    if BL_SPACE is None:
+        raise PreconditionError('BL_SPACE is not set')
+    if BL_API_KEY is None:
+        raise PreconditionError('BL_API_KEY is not set')
+
+    issue = args.issue
+    if issue is None:
+        raise PreconditionError('no input issue')
+
+    resource = request_get_backlog_resources(f'/api/v2/issues/{issue}')
+    print(resource['description'])
+
+
+def do_edit(args: argparse.Namespace):
+    if BL_SPACE is None:
+        raise PreconditionError('BL_SPACE is not set')
+    if BL_API_KEY is None:
+        raise PreconditionError('BL_API_KEY is not set')
+    if os.getenv('EDITOR') is None:
+        raise PreconditionError('EDITOR is not set')
+
+    issue = args.issue
+    if issue is None:
+        raise PreconditionError('no input issue')
+
+    resource = request_get_backlog_resources(f'/api/v2/issues/{issue}')
+    with tempfile.NamedTemporaryFile(mode='w+', delete_on_close=False) as fp:
+        fp.write(resource['description'] + '\n')
+        fp.close()
+
+        result = subprocess.run('$EDITOR "$BL_TEMPFILE"', shell=True, env=dict(**os.environ, **{'BL_TEMPFILE': fp.name}))
+        if result.returncode != 0:
+            raise PreconditionError('editor command failed')
+
+        description = re.sub(r'\n\Z', '', pathlib.Path(fp.name).read_text())
+        if description != resource['description']:
+            request_post_backlog_resources(f'/api/v2/issues/{issue}', method='PATCH', params={'description': description})
+
+        print(f'{resource['issueKey']} {resource['summary']}')
+
+
 def do_resource_sync(args: argparse.Namespace):
     if BL_SPACE is None:
         raise PreconditionError('BL_SPACE is not set')
@@ -1094,6 +1187,16 @@ def main():
     subparser_update.add_argument('-r', '--resolution', dest='resolution')
     subparser_update.add_argument('-h', '--help', action='store_true', dest='help')
     subparser_update.set_defaults(handler=do_update, command='update')
+
+    subparser_edit = subparsers.add_parser('edit', allow_abbrev=False, add_help=False)
+    subparser_edit.add_argument('-h', '--help', action='store_true', dest='help')
+    subparser_edit.add_argument('issue', nargs='?')
+    subparser_edit.set_defaults(handler=do_edit, command='edit')
+
+    subparser_show = subparsers.add_parser('show', allow_abbrev=False, add_help=False)
+    subparser_show.add_argument('-h', '--help', action='store_true', dest='help')
+    subparser_show.add_argument('issue', nargs='?')
+    subparser_show.set_defaults(handler=do_show, command='show')
 
     subparser_resource = subparsers.add_parser('resource', allow_abbrev=False, add_help=False)
     subparser_resources = subparser_resource.add_subparsers()
