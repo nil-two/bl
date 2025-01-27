@@ -5,6 +5,7 @@ _bl() {
     'update:update Backlog issue'
     'edit:edit Backlog issue'
     'show:show Backlog issue'
+    'open:open Backlog issue with web browser'
     'resource:handle Backlog resources'
     'configure:edit config'
     'completion:print evaluatable completion script'
@@ -134,6 +135,11 @@ _bl() {
             '1:issue:'
           ;;
         show)
+          _arguments -C -S -s \
+            '(-h --help)'{-h,--help}'[print usage and exit]' \
+            '1:issue:'
+          ;;
+        open)
           _arguments -C -S -s \
             '(-h --help)'{-h,--help}'[print usage and exit]' \
             '1:issue:'

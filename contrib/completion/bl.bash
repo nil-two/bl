@@ -10,6 +10,7 @@ _bl() {
     update
     edit
     show
+    open
     resource
     configure
     completion
@@ -56,6 +57,9 @@ _bl() {
     --help
   )
   local show_options=(
+    --help
+  )
+  local open_options=(
     --help
   )
   local resource_sync_options=(
@@ -191,6 +195,14 @@ _bl() {
             case $cur in
               -*)
                 COMPREPLY=( $(compgen -W '"${show_options[@]}"' -- "$cur") )
+                ;;
+            esac
+            ;;
+          show)
+            $split && break
+            case $cur in
+              -*)
+                COMPREPLY=( $(compgen -W '"${open_options[@]}"' -- "$cur") )
                 ;;
             esac
             ;;

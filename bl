@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 import argparse
 import tempfile
+import shutil
 import datetime
 import json
 import os
@@ -29,6 +30,7 @@ commands:
   bl update         # update Backlog issue
   bl edit           # edit Backlog issue
   bl show           # show Backlog issue
+  bl open           # open Backlog issue with web browser
   bl resource sync  # sync Backlog resources to caches
   bl resource list  # list Backlog resources from caches
   bl configure      # edit config
@@ -93,6 +95,13 @@ options:
 SUBCMD_USAGE['show'] = '''
 usage: bl show [<option(s)>] <issue>
 show Backlog issue.
+
+options:
+  -h, --help  print usage and exit
+'''.strip()
+SUBCMD_USAGE['open'] = '''
+usage: bl open [<option(s)>] <issue>
+open Backlog issue with web browser.
 
 options:
   -h, --help  print usage and exit
@@ -174,6 +183,11 @@ VIRTUAL_RESOURCES['resolutions'] = {
     '再現しない': {'id': 4, 'displayOrder': 5}
 }
 
+OPEN_COMMANDS = [
+    'xdg-open',
+    'open',
+]
+
 SHELL_COMPLETION_SCRIPTS = {}
 # embed:start:completion:bash:contrib/completion/bl.bash
 SHELL_COMPLETION_SCRIPTS['bash'] = '''
@@ -189,6 +203,7 @@ _bl() {
     update
     edit
     show
+    open
     resource
     configure
     completion
@@ -235,6 +250,9 @@ _bl() {
     --help
   )
   local show_options=(
+    --help
+  )
+  local open_options=(
     --help
   )
   local resource_sync_options=(
@@ -373,6 +391,14 @@ _bl() {
                 ;;
             esac
             ;;
+          show)
+            $split && break
+            case $cur in
+              -*)
+                COMPREPLY=( $(compgen -W '"${open_options[@]}"' -- "$cur") )
+                ;;
+            esac
+            ;;
           resource)
             case $cword in
               2)
@@ -485,6 +511,7 @@ _bl() {
     'update:update Backlog issue'
     'edit:edit Backlog issue'
     'show:show Backlog issue'
+    'open:open Backlog issue with web browser'
     'resource:handle Backlog resources'
     'configure:edit config'
     'completion:print evaluatable completion script'
@@ -618,6 +645,11 @@ _bl() {
             '(-h --help)'{-h,--help}'[print usage and exit]' \\
             '1:issue:'
           ;;
+        open)
+          _arguments -C -S -s \\
+            '(-h --help)'{-h,--help}'[print usage and exit]' \\
+            '1:issue:'
+          ;;
         resource)
           _arguments -C -S -s \\
             '1: :->resource_command' \\
@@ -740,6 +772,8 @@ complete -c bl -n '__fish_use_subcommand' -xa edit -d 'Edit Backlog issue'
 complete -c bl -n '__fish_seen_subcommand_from edit' -s h -l help -d 'Print usage and exit'
 complete -c bl -n '__fish_use_subcommand' -xa show -d 'Show Backlog issue'
 complete -c bl -n '__fish_seen_subcommand_from show' -s h -l help -d 'Print usage and exit'
+complete -c bl -n '__fish_use_subcommand' -xa open -d 'Open Backlog issue with web browser'
+complete -c bl -n '__fish_seen_subcommand_from open' -s h -l help -d 'Print usage and exit'
 complete -c bl -n '__fish_use_subcommand' -xa resource -d 'Handle Backlog resources'
 complete -c bl -n '__fish_seen_subcommand_from resource; and not __fish_seen_subcommand_from sync list' -xa sync -d 'Sync Backlog resources to caches'
 complete -c bl -n '__fish_seen_subcommand_from resource; and __fish_seen_subcommand_from sync' -s p -l project -xa '(bl resource list projects)' -d 'Sync resource caches of PROJECT'
@@ -759,6 +793,7 @@ complete -c bl -n '__fish_seen_subcommand_from help; and not __fish_seen_subcomm
 complete -c bl -n '__fish_seen_subcommand_from help; and not __fish_seen_subcommand_from resource' -xa update -d 'Command'
 complete -c bl -n '__fish_seen_subcommand_from help; and not __fish_seen_subcommand_from resource' -xa edit -d 'Command'
 complete -c bl -n '__fish_seen_subcommand_from help; and not __fish_seen_subcommand_from resource' -xa show -d 'Command'
+complete -c bl -n '__fish_seen_subcommand_from help; and not __fish_seen_subcommand_from resource' -xa open -d 'Command'
 complete -c bl -n '__fish_seen_subcommand_from help; and not __fish_seen_subcommand_from resource' -xa resource -d 'Command'
 complete -c bl -n '__fish_seen_subcommand_from help; and __fish_seen_subcommand_from resource' -xa sync -d 'Command'
 complete -c bl -n '__fish_seen_subcommand_from help; and __fish_seen_subcommand_from resource' -xa list -d 'Command'
@@ -1027,6 +1062,28 @@ def do_show(args: argparse.Namespace):
     print(resource['description'])
 
 
+def do_open(args: argparse.Namespace):
+    if BL_SPACE is None:
+        raise PreconditionError('BL_SPACE is not set')
+
+    issue = args.issue
+    if issue is None:
+        raise PreconditionError('no input issue')
+
+    issue_url = f'https://{BL_SPACE}/view/{issue}'
+    open_command = None
+    for command in OPEN_COMMANDS:
+        if shutil.which(command) is not None:
+            open_command = command
+            break
+    if open_command is None:
+        raise PreconditionError('open command installed')
+
+    result = subprocess.run('"$BL_OPEN_COMMAND" "$BL_ISSUE_URL"', shell=True, env=dict(**os.environ, **{'BL_OPEN_COMMAND': open_command, 'BL_ISSUE_URL': issue_url}))
+    if result.returncode != 0:
+        raise PreconditionError('open command failed')
+
+
 def do_edit(args: argparse.Namespace):
     if BL_SPACE is None:
         raise PreconditionError('BL_SPACE is not set')
@@ -1231,6 +1288,11 @@ def main():
     subparser_show.add_argument('-h', '--help', action='store_true', dest='help')
     subparser_show.add_argument('issue', nargs='?')
     subparser_show.set_defaults(handler=do_show, command='show')
+
+    subparser_open = subparsers.add_parser('open', allow_abbrev=False, add_help=False)
+    subparser_open.add_argument('-h', '--help', action='store_true', dest='help')
+    subparser_open.add_argument('issue', nargs='?')
+    subparser_open.set_defaults(handler=do_open, command='open')
 
     subparser_resource = subparsers.add_parser('resource', allow_abbrev=False, add_help=False)
     subparser_resources = subparser_resource.add_subparsers()
