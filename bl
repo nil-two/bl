@@ -791,18 +791,19 @@ def save_registry(registry: dict):
     registry_path.write_text(json.dumps(registry, ensure_ascii=False, indent=4) + '\n')
 
 
-def request_get_backlog_resources(api_path: str):
+def request_get_backlog_resources(api_path: str, delay_sec: int = 0):
     if BL_SPACE is None:
         raise PreconditionError('BL_SPACE is not set')
     if BL_API_KEY is None:
         raise PreconditionError('BL_API_KEY is not set')
     req = urllib.request.Request(f'https://{BL_SPACE}{api_path}?apiKey={BL_API_KEY}', method='GET')
-    time.sleep(1)
     with urllib.request.urlopen(req) as res:
-        return json.loads(res.read().decode('utf-8'))
+        result = json.loads(res.read().decode('utf-8'))
+        time.sleep(delay_sec)
+        return result
 
 
-def request_post_backlog_resources(api_path: str, method: str = 'POST', params: dict = {}):
+def request_post_backlog_resources(api_path: str, method: str = 'POST', params: dict = {}, delay_sec: int = 0):
     if BL_SPACE is None:
         raise PreconditionError('BL_SPACE is not set')
     if BL_API_KEY is None:
@@ -810,9 +811,10 @@ def request_post_backlog_resources(api_path: str, method: str = 'POST', params: 
     headers = {'Content-Type': 'application/x-www-form-urlencoded'}
     data = urllib.parse.urlencode(params).encode('utf-8')
     req = urllib.request.Request(f'https://{BL_SPACE}{api_path}?apiKey={BL_API_KEY}', method=method, headers=headers, data=data)
-    time.sleep(1)
     with urllib.request.urlopen(req) as res:
-        return json.loads(res.read().decode('utf-8'))
+        result = json.loads(res.read().decode('utf-8'))
+        time.sleep(delay_sec)
+        return result
 
 
 def do_create(args: argparse.Namespace):
@@ -868,7 +870,7 @@ def do_create(args: argparse.Namespace):
     params['projectId'] = project_id
     params['summary'] = summary
     if parent_issue is not None and parent_issue != '':
-        params['parentIssueId'] = request_get_backlog_resources(f'/api/v2/issues/{parent_issue}')['id']
+        params['parentIssueId'] = request_get_backlog_resources(f'/api/v2/issues/{parent_issue}', delay_sec=1)['id']
     if description is not None and description != '' or description is None and recursive_get(resources, ['issueTypes', issue_type, 'templateDescription']) is not None:
         params['description'] = description or recursive_get(resources, ['issueTypes', issue_type, 'templateDescription'])
     if start_date is not None and start_date != '':
@@ -888,7 +890,7 @@ def do_create(args: argparse.Namespace):
     if assignee is not None and assignee != '':
         params['assigneeId'] = recursive_get(registry, ['resources', 'spaces', BL_SPACE, 'users', assignee, 'id'])
 
-    resource = request_post_backlog_resources('/api/v2/issues', method='POST', params=params)
+    resource = request_post_backlog_resources('/api/v2/issues', method='POST', params=params, delay_sec=1)
     print(f'{resource['issueKey']} {resource['summary']}')
 
 
@@ -951,7 +953,7 @@ def do_update(args: argparse.Namespace):
 
     params = {}
     if parent_issue is not None:
-        params['parentIssueId'] = '' if parent_issue == '' else request_get_backlog_resources(f'/api/v2/issues/{parent_issue}')['id']
+        params['parentIssueId'] = '' if parent_issue == '' else request_get_backlog_resources(f'/api/v2/issues/{parent_issue}', delay_sec=1)['id']
     if summary is not None:
         params['summary'] = summary
     if description is not None:
@@ -975,7 +977,7 @@ def do_update(args: argparse.Namespace):
     if resolution is not None:
         params['resolutionId'] = '' if resolution == '' else recursive_get(VIRTUAL_RESOURCES, ['resolutions', resolution, 'id'])
 
-    resource = request_post_backlog_resources(f'/api/v2/issues/{issue}', method='PATCH', params=params)
+    resource = request_post_backlog_resources(f'/api/v2/issues/{issue}', method='PATCH', params=params, delay_sec=1)
     print(f'{resource['issueKey']} {resource['summary']}')
 
 
@@ -1016,7 +1018,7 @@ def do_edit(args: argparse.Namespace):
 
         description = re.sub(r'\n\Z', '', pathlib.Path(fp.name).read_text())
         if description != resource['description']:
-            request_post_backlog_resources(f'/api/v2/issues/{issue}', method='PATCH', params={'description': description})
+            request_post_backlog_resources(f'/api/v2/issues/{issue}', method='PATCH', params={'description': description}, delay_sec=1)
 
         print(f'{resource['issueKey']} {resource['summary']}')
 
@@ -1049,32 +1051,32 @@ def do_resource_sync(args: argparse.Namespace):
     recursive_set_default(defaults, ['create', 'milestone'], None)
     recursive_set_default(defaults, ['create', 'priority'], None)
     if recursive_get(users, ['myself', 'id']) is None:
-        resource = request_get_backlog_resources('/api/v2/users/myself')
+        resource = request_get_backlog_resources('/api/v2/users/myself', delay_sec=1)
         recursive_set(users, ['myself', 'id'], resource['id'])
     if recursive_get(resources, ['id']) is None:
-        resource = request_get_backlog_resources(f'/api/v2/projects/{project}')
+        resource = request_get_backlog_resources(f'/api/v2/projects/{project}', delay_sec=1)
         recursive_set(resources, ['id'], resource['id'])
     recursive_set(resources, ['issueTypes'], {})
     recursive_set(resources, ['categories'], {})
     recursive_set(resources, ['versions'], {})
     recursive_set(resources, ['statuses'], {})
-    for resource in request_get_backlog_resources(f'/api/v2/projects/{project}/issueTypes'):
+    for resource in request_get_backlog_resources(f'/api/v2/projects/{project}/issueTypes', delay_sec=1):
         recursive_set(resources, ['issueTypes', resource['name']], {
             'id': resource['id'],
             'displayOrder': resource['displayOrder'],
             'templateDescription': resource['templateDescription'].replace('\r\n', '\n') if resource['templateDescription'] is not None else None,
         })
-    for resource in request_get_backlog_resources(f'/api/v2/projects/{project}/categories'):
+    for resource in request_get_backlog_resources(f'/api/v2/projects/{project}/categories', delay_sec=1):
         recursive_set(resources, ['categories', resource['name']], {
             'id': resource['id'],
             'displayOrder': resource['displayOrder'],
         })
-    for resource in request_get_backlog_resources(f'/api/v2/projects/{project}/versions'):
+    for resource in request_get_backlog_resources(f'/api/v2/projects/{project}/versions', delay_sec=1):
         recursive_set(resources, ['versions', resource['name']], {
             'id': resource['id'],
             'displayOrder': resource['displayOrder'],
         })
-    for resource in request_get_backlog_resources(f'/api/v2/projects/{project}/statuses'):
+    for resource in request_get_backlog_resources(f'/api/v2/projects/{project}/statuses', delay_sec=1):
         recursive_set(resources, ['statuses', resource['name']], {
             'id': resource['id'],
             'displayOrder': resource['displayOrder'],
