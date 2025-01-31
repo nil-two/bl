@@ -159,6 +159,10 @@ options:
   -h, --help  print usage and exit
 '''.strip()
 
+OPEN_COMMANDS = [
+    'xdg-open',
+    'open',
+]
 RESOURCE_TYPES = [
     'spaces',
     'projects',
@@ -182,11 +186,6 @@ VIRTUAL_RESOURCES['resolutions'] = {
     '重複': {'id': 3, 'displayOrder': 4},
     '再現しない': {'id': 4, 'displayOrder': 5}
 }
-
-OPEN_COMMANDS = [
-    'xdg-open',
-    'open',
-]
 
 SHELL_COMPLETION_SCRIPTS = {}
 # embed:start:completion:bash:contrib/completion/bl.bash
@@ -934,10 +933,12 @@ def do_create(args: argparse.Namespace):
         raise PreconditionError(f'unrecognized user \'{assignee}\'')
 
     params = {}
-    params['projectId'] = project_id
-    params['summary'] = summary
+    if project_id is not None and project_id != '':
+        params['projectId'] = project_id
     if parent_issue is not None and parent_issue != '':
         params['parentIssueId'] = request_get_backlog_resources(f'/api/v2/issues/{parent_issue}', delay_sec=1)['id']
+    if summary is not None and summary != '':
+        params['summary'] = summary
     if description is not None and description != '' or description is None and recursive_get(resources, ['issueTypes', issue_type, 'templateDescription']) is not None:
         params['description'] = description or recursive_get(resources, ['issueTypes', issue_type, 'templateDescription'])
     if start_date is not None and start_date != '':
@@ -1048,6 +1049,34 @@ def do_update(args: argparse.Namespace):
     print(f'{resource['issueKey']} {resource['summary']}')
 
 
+def do_edit(args: argparse.Namespace):
+    if BL_SPACE is None:
+        raise PreconditionError('BL_SPACE is not set')
+    if BL_API_KEY is None:
+        raise PreconditionError('BL_API_KEY is not set')
+    if os.getenv('EDITOR') is None:
+        raise PreconditionError('EDITOR is not set')
+
+    issue = args.issue
+    if issue is None:
+        raise PreconditionError('no input issue')
+
+    resource = request_get_backlog_resources(f'/api/v2/issues/{issue}')
+    with tempfile.NamedTemporaryFile(mode='w+', delete_on_close=False) as fp:
+        fp.write(resource['description'] + '\n')
+        fp.close()
+
+        result = subprocess.run('$EDITOR "$BL_TEMPFILE"', shell=True, env=dict(**os.environ, **{'BL_TEMPFILE': fp.name}))
+        if result.returncode != 0:
+            raise PreconditionError('editor command failed')
+
+        description = re.sub(r'\n\Z', '', pathlib.Path(fp.name).read_text())
+        if description != resource['description']:
+            request_post_backlog_resources(f'/api/v2/issues/{issue}', method='PATCH', params={'description': description}, delay_sec=1)
+
+        print(f'{resource['issueKey']} {resource['summary']}')
+
+
 def do_show(args: argparse.Namespace):
     if BL_SPACE is None:
         raise PreconditionError('BL_SPACE is not set')
@@ -1082,34 +1111,6 @@ def do_open(args: argparse.Namespace):
     result = subprocess.run('"$BL_OPEN_COMMAND" "$BL_ISSUE_URL"', shell=True, env=dict(**os.environ, **{'BL_OPEN_COMMAND': open_command, 'BL_ISSUE_URL': issue_url}))
     if result.returncode != 0:
         raise PreconditionError('open command failed')
-
-
-def do_edit(args: argparse.Namespace):
-    if BL_SPACE is None:
-        raise PreconditionError('BL_SPACE is not set')
-    if BL_API_KEY is None:
-        raise PreconditionError('BL_API_KEY is not set')
-    if os.getenv('EDITOR') is None:
-        raise PreconditionError('EDITOR is not set')
-
-    issue = args.issue
-    if issue is None:
-        raise PreconditionError('no input issue')
-
-    resource = request_get_backlog_resources(f'/api/v2/issues/{issue}')
-    with tempfile.NamedTemporaryFile(mode='w+', delete_on_close=False) as fp:
-        fp.write(resource['description'] + '\n')
-        fp.close()
-
-        result = subprocess.run('$EDITOR "$BL_TEMPFILE"', shell=True, env=dict(**os.environ, **{'BL_TEMPFILE': fp.name}))
-        if result.returncode != 0:
-            raise PreconditionError('editor command failed')
-
-        description = re.sub(r'\n\Z', '', pathlib.Path(fp.name).read_text())
-        if description != resource['description']:
-            request_post_backlog_resources(f'/api/v2/issues/{issue}', method='PATCH', params={'description': description}, delay_sec=1)
-
-        print(f'{resource['issueKey']} {resource['summary']}')
 
 
 def do_resource_sync(args: argparse.Namespace):
@@ -1204,17 +1205,13 @@ def do_resource_list(args: argparse.Namespace):
 
     for resource_name in resource_names:
         print(resource_name)
-    return 0
 
 
 def do_configure(args: argparse.Namespace):
     if os.getenv('EDITOR') is None:
         raise PreconditionError('EDITOR is not set')
 
-    env = os.environ.copy()
-    env['BL_REGISTRY'] = BL_REGISTRY
-    subprocess.run('$EDITOR "$BL_REGISTRY"', shell=True, env=env)
-    return 0
+    subprocess.run('$EDITOR "$BL_REGISTRY"', shell=True, env=dict(**os.environ, **{'BL_REGISTRY': BL_REGISTRY}))
 
 
 def do_completion(args: argparse.Namespace):
@@ -1225,7 +1222,6 @@ def do_completion(args: argparse.Namespace):
         raise PreconditionError(f'unrecognized shell \'{shell}\'')
 
     print(SHELL_COMPLETION_SCRIPTS[shell])
-    return 0
 
 
 def do_help(args: argparse.Namespace):
@@ -1237,7 +1233,6 @@ def do_help(args: argparse.Namespace):
         print(CMD_USAGE)
     else:
         print(SUBCMD_USAGE[command])
-    return 0
 
 
 def main():
@@ -1328,7 +1323,7 @@ def main():
         if args.root_help:
             print(CMD_USAGE)
             return sys.exit(0)
-        if args.help and args.command is not None:
+        if args.command is not None and args.help:
             print(SUBCMD_USAGE[args.command])
             return sys.exit(0)
 
@@ -1336,8 +1331,7 @@ def main():
             print(CMD_USAGE)
             return sys.exit(1)
 
-        exitcode = args.handler(args)
-        return sys.exit(exitcode)
+        args.handler(args)
     except (argparse.ArgumentError, PreconditionError) as e:
         warn(e)
         return sys.exit(1)
