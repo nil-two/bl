@@ -1310,7 +1310,6 @@ def main():
 
     subparser_configure = subparsers.add_parser('configure', allow_abbrev=False, add_help=False)
     subparser_configure.add_argument('-h', '--help', action='store_true', dest='help')
-    subparser_configure.add_argument('shell', nargs='?')
     subparser_configure.set_defaults(handler=do_configure, command='configure')
 
     subparser_help = subparsers.add_parser('help', allow_abbrev=False, add_help=False)
