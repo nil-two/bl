@@ -210,11 +210,7 @@ _bl() {
             case $cword in
               2)
                 $split && break
-                case $cur in
-                  -*)
-                    COMPREPLY=( $(compgen -W '"${resource_commands[@]}"' -- "$cur") )
-                    ;;
-                esac
+                COMPREPLY=( $(compgen -W '"${resource_commands[@]}"' -- "$cur") )
                 ;;
               *)
                 case ${words[2]} in
@@ -276,11 +272,7 @@ _bl() {
             $split && break
             case $cur in
               -*)
-                case $cur in
-                  -*)
-                    COMPREPLY=( $(compgen -W '"${help_options[@]}"' -- "$cur") )
-                    ;;
-                esac
+                COMPREPLY=( $(compgen -W '"${help_options[@]}"' -- "$cur") )
                 ;;
               *)
                 case $cword in
