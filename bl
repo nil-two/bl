@@ -867,7 +867,7 @@ def request_post_backlog_resources(api_path: str, method: str = 'POST', params: 
     if BL_API_KEY is None:
         raise PreconditionError('BL_API_KEY is not set')
     headers = {'Content-Type': 'application/x-www-form-urlencoded'}
-    data = urllib.parse.urlencode(params).encode('utf-8')
+    data = urllib.parse.urlencode(params, doseq=True).encode('utf-8')
     req = urllib.request.Request(f'https://{BL_SPACE}{api_path}?apiKey={BL_API_KEY}', method=method, headers=headers, data=data)
     with urllib.request.urlopen(req) as res:
         result = json.loads(res.read().decode('utf-8'))
@@ -900,9 +900,9 @@ def do_create(args: argparse.Namespace):
     start_date = args.start_date or defaults.get('startDate')
     due_date = args.due_date or defaults.get('dueDate')
     issue_type = args.issue_type or defaults.get('issueType')
-    category = args.category or defaults.get('category')
-    version = args.version or defaults.get('version')
-    milestone = args.milestone or defaults.get('milestone')
+    categories = args.categories or defaults.get('categories')
+    versions = args.versions or defaults.get('versions')
+    milestones = args.milestones or defaults.get('milestones')
     priority = args.priority or defaults.get('priority')
     assignee = 'myself'
     if summary is None or summary == '':
@@ -911,12 +911,12 @@ def do_create(args: argparse.Namespace):
         raise PreconditionError('no input issue type')
     if not (issue_type is None or issue_type == '') and recursive_get(resources, ['issueTypes', issue_type, 'id']) is None:
         raise PreconditionError(f'unrecognized issue type \'{issue_type}\'')
-    if not (category is None or category == '') and recursive_get(resources, ['categories', category, 'id']) is None:
-        raise PreconditionError(f'unrecognized category \'{category}\'')
-    if not (version is None or version == '') and recursive_get(resources, ['versions', version, 'id']) is None:
-        raise PreconditionError(f'unrecognized version \'{version}\'')
-    if not (milestone is None or milestone == '') and recursive_get(resources, ['versions', milestone, 'id']) is None:
-        raise PreconditionError(f'unrecognized milestone \'{milestone}\'')
+    if not (categories is None or len(categories) == 0 or (len(categories) == 1 and categories[0] == '')) and any([recursive_get(resources, ['categories', c, 'id']) is None for c in categories]):
+        raise PreconditionError('unrecognized category %s' % ', '.join([f'\'{c}\'' for c in categories if recursive_get(resources, ['categories', c, 'id']) is None]))
+    if not (versions is None or len(versions) == 0 or (len(versions) == 1 and versions[0] == '')) and any([recursive_get(resources, ['versions', v, 'id']) is None for v in versions]):
+        raise PreconditionError('unrecognized version %s' % ', '.join([f'\'{v}\'' for v in versions if recursive_get(resources, ['versions', v, 'id']) is None]))
+    if not (milestones is None or len(milestones) == 0 or (len(milestones) == 1 and milestones[0] == '')) and any([recursive_get(resources, ['versions', m, 'id']) is None for m in milestones]):
+        raise PreconditionError('unrecognized milestone %s' % ', '.join([f'\'{m}\'' for m in milestones if recursive_get(resources, ['versions', m, 'id']) is None]))
     if priority is None or priority == '':
         raise PreconditionError('no input priority')
     if not (priority is None or priority == '') and recursive_get(VIRTUAL_RESOURCES, ['priorities', priority, 'id']) is None:
@@ -939,12 +939,12 @@ def do_create(args: argparse.Namespace):
         params['dueDate'] = today.strftime('%Y-%m-%d') if due_date == 'today' else due_date
     if issue_type is not None and issue_type != '':
         params['issueTypeId'] = recursive_get(resources, ['issueTypes', issue_type, 'id'])
-    if category is not None and category != '':
-        params['categoryId[]'] = recursive_get(resources, ['categories', category, 'id'])
-    if version is not None and version != '':
-        params['versionId[]'] = recursive_get(resources, ['versions', version, 'id'])
-    if milestone is not None and milestone != '':
-        params['milestoneId[]'] = recursive_get(resources, ['versions', milestone, 'id'])
+    if categories is not None and len(categories) != 0 and not (len(categories) == 1 and categories[0] == '') and len(categories) >= 1:
+        params['categoryId[]'] = [recursive_get(resources, ['categories', c, 'id']) for c in categories]
+    if versions is not None and len(versions) != 0 and not (len(versions) == 1 and versions[0] == '') and len(versions) >= 1:
+        params['versionId[]'] = [recursive_get(resources, ['versions', v, 'id']) for v in versions]
+    if milestones is not None and len(milestones) != 0 and not (len(milestones) == 1 and milestones[0] == '') and len(milestones) >= 1:
+        params['milestoneId[]'] = [recursive_get(resources, ['versions', m, 'id']) for m in milestones]
     if priority is not None and priority != '':
         params['priorityId'] = recursive_get(VIRTUAL_RESOURCES, ['priorities', priority, 'id'])
     if assignee is not None and assignee != '':
@@ -982,9 +982,9 @@ def do_update(args: argparse.Namespace):
     start_date = args.start_date
     due_date = args.due_date
     issue_type = args.issue_type
-    category = args.category
-    version = args.version
-    milestone = args.milestone
+    categories = args.categories
+    versions = args.versions
+    milestones = args.milestones
     priority = args.priority
     status = args.status
     resolution = args.resolution
@@ -994,12 +994,12 @@ def do_update(args: argparse.Namespace):
         raise PreconditionError('issue type cannot be unset')
     if not (issue_type is None or issue_type == '') and recursive_get(resources, ['issueTypes', issue_type, 'id']) is None:
         raise PreconditionError(f'unrecognized issue type \'{issue_type}\'')
-    if not (category is None or category == '') and recursive_get(resources, ['categories', category, 'id']) is None:
-        raise PreconditionError(f'unrecognized category \'{category}\'')
-    if not (version is None or version == '') and recursive_get(resources, ['versions', version, 'id']) is None:
-        raise PreconditionError(f'unrecognized version \'{version}\'')
-    if not (milestone is None or milestone == '') and recursive_get(resources, ['versions', milestone, 'id']) is None:
-        raise PreconditionError(f'unrecognized milestone \'{milestone}\'')
+    if not (categories is None or len(categories) == 0 or (len(categories) == 1 and categories[0] == '')) and any([recursive_get(resources, ['categories', c, 'id']) is None for c in categories]):
+        raise PreconditionError('unrecognized category %s' % ', '.join([f'\'{c}\'' for c in categories if recursive_get(resources, ['categories', c, 'id']) is None]))
+    if not (versions is None or len(versions) == 0 or (len(versions) == 1 and versions[0] == '')) and any([recursive_get(resources, ['versions', v, 'id']) is None for v in versions]):
+        raise PreconditionError('unrecognized version %s' % ', '.join([f'\'{v}\'' for v in versions if recursive_get(resources, ['versions', v, 'id']) is None]))
+    if not (milestones is None or len(milestones) == 0 or (len(milestones) == 1 and milestones[0] == '')) and any([recursive_get(resources, ['versions', m, 'id']) is None for m in milestones]):
+        raise PreconditionError('unrecognized milestone %s' % ', '.join([f'\'{m}\'' for m in milestones if recursive_get(resources, ['versions', m, 'id']) is None]))
     if priority == '':
         raise PreconditionError('priority cannot be unset')
     if not (priority is None or priority == '') and recursive_get(VIRTUAL_RESOURCES, ['priorities', priority, 'id']) is None:
@@ -1024,12 +1024,12 @@ def do_update(args: argparse.Namespace):
         params['dueDate'] = '' if due_date == '' else today.strftime('%Y-%m-%d') if due_date == 'today' else due_date
     if issue_type is not None:
         params['issueTypeId'] = '' if issue_type == '' else recursive_get(resources, ['issueTypes', issue_type, 'id'])
-    if category is not None:
-        params['categoryId[]'] = '' if category == '' else recursive_get(resources, ['categories', category, 'id'])
-    if version is not None:
-        params['versionId[]'] = '' if version == '' else recursive_get(resources, ['versions', version, 'id'])
-    if milestone is not None:
-        params['milestoneId[]'] = '' if milestone == '' else recursive_get(resources, ['versions', milestone, 'id'])
+    if categories is not None:
+        params['categoryId[]'] = '' if len(categories) == 1 and categories[0] == '' else [recursive_get(resources, ['categories', c, 'id']) for c in categories]
+    if versions is not None:
+        params['versionId[]'] = '' if len(versions) == 1 and versions[0] == '' else [recursive_get(resources, ['versions', v, 'id']) for v in versions]
+    if milestones is not None:
+        params['milestoneId[]'] = '' if len(milestones) == 1 and milestones[0] == '' else [recursive_get(resources, ['versions', m, 'id']) for m in milestones]
     if priority is not None:
         params['priorityId'] = '' if priority == '' else recursive_get(VIRTUAL_RESOURCES, ['priorities', priority, 'id'])
     if status is not None:
@@ -1128,9 +1128,9 @@ def do_resource_sync(args: argparse.Namespace):
     recursive_set_default(defaults, ['create', 'startDate'], 'today')
     recursive_set_default(defaults, ['create', 'dueDate'], 'today')
     recursive_set_default(defaults, ['create', 'issueType'], None)
-    recursive_set_default(defaults, ['create', 'category'], None)
-    recursive_set_default(defaults, ['create', 'version'], None)
-    recursive_set_default(defaults, ['create', 'milestone'], None)
+    recursive_set_default(defaults, ['create', 'categories'], [])
+    recursive_set_default(defaults, ['create', 'versions'], [])
+    recursive_set_default(defaults, ['create', 'milestones'], [])
     recursive_set_default(defaults, ['create', 'priority'], '中')
     if recursive_get(users, ['myself', 'id']) is None:
         resource = request_get_backlog_resources('/api/v2/users/myself', delay_sec=1)
@@ -1242,9 +1242,9 @@ def main():
     subparser_create.add_argument('-S', '--start-date', dest='start_date')
     subparser_create.add_argument('-D', '--due-date', dest='due_date')
     subparser_create.add_argument('-t', '--issue-type', dest='issue_type')
-    subparser_create.add_argument('-c', '--category', dest='category')
-    subparser_create.add_argument('-v', '--version', dest='version')
-    subparser_create.add_argument('-m', '--milestone', dest='milestone')
+    subparser_create.add_argument('-c', '--category', dest='categories', action='append')
+    subparser_create.add_argument('-v', '--version', dest='versions', action='append')
+    subparser_create.add_argument('-m', '--milestone', dest='milestones', action='append')
     subparser_create.add_argument('-P', '--priority', dest='priority')
     subparser_create.add_argument('-h', '--help', action='store_true', dest='help')
     subparser_create.set_defaults(handler=do_create, command='create')
@@ -1257,9 +1257,9 @@ def main():
     subparser_update.add_argument('-S', '--start-date', dest='start_date')
     subparser_update.add_argument('-D', '--due-date', dest='due_date')
     subparser_update.add_argument('-t', '--issue-type', dest='issue_type')
-    subparser_update.add_argument('-c', '--category', dest='category')
-    subparser_update.add_argument('-v', '--version', dest='version')
-    subparser_update.add_argument('-m', '--milestone', dest='milestone')
+    subparser_update.add_argument('-c', '--category', dest='categories', action='append')
+    subparser_update.add_argument('-v', '--version', dest='versions', action='append')
+    subparser_update.add_argument('-m', '--milestone', dest='milestones', action='append')
     subparser_update.add_argument('-P', '--priority', dest='priority')
     subparser_update.add_argument('-T', '--status', dest='status')
     subparser_update.add_argument('-r', '--resolution', dest='resolution')
