@@ -854,7 +854,7 @@ def load_registry():
     if registry_path.exists():
         return json.loads(registry_path.read_text())
     else:
-        return {'version': '1.0', 'defaults': {}, 'resources': {}}
+        return {'version': '1.0', 'defaults': {}, 'caches': {}}
 
 
 def save_registry(registry: dict):
@@ -903,12 +903,12 @@ def do_create(args: argparse.Namespace):
     project = args.project or BL_PROJECT
     if project is None:
         raise PreconditionError('no input project')
-    project_id = recursive_get(registry, ['resources', 'spaces', BL_SPACE, 'projects', project, 'id'])
+    project_id = recursive_get(registry, ['caches', 'spaces', BL_SPACE, 'projects', project, 'id'])
     if project_id is None:
         raise PreconditionError(f'project not synced \'{project}\'')
 
     defaults = recursive_get(registry, ['defaults', 'spaces', BL_SPACE, 'projects', project, 'create'], {})
-    resources = recursive_get(registry, ['resources', 'spaces', BL_SPACE, 'projects', project], {})
+    resources = recursive_get(registry, ['caches', 'spaces', BL_SPACE, 'projects', project], {})
 
     parent_issue = args.parent_issue or defaults.get('parentIssue')
     summary = args.summary
@@ -939,7 +939,7 @@ def do_create(args: argparse.Namespace):
         raise PreconditionError('no input priority')
     if not (priority is None or priority == '') and recursive_get(VIRTUAL_RESOURCES, ['priorities', priority, 'id']) is None:
         raise PreconditionError(f'unrecognized priority \'{priority}\'')
-    if not (assignee is None or assignee == '') and recursive_get(registry, ['resources', 'spaces', BL_SPACE, 'users', assignee, 'id']) is None:
+    if not (assignee is None or assignee == '') and recursive_get(registry, ['caches', 'spaces', BL_SPACE, 'users', assignee, 'id']) is None:
         raise PreconditionError(f'unrecognized user \'{assignee}\'')
 
     params = {}
@@ -970,7 +970,7 @@ def do_create(args: argparse.Namespace):
     if priority is not None and priority != '':
         params['priorityId'] = recursive_get(VIRTUAL_RESOURCES, ['priorities', priority, 'id'])
     if assignee is not None and assignee != '':
-        params['assigneeId'] = recursive_get(registry, ['resources', 'spaces', BL_SPACE, 'users', assignee, 'id'])
+        params['assigneeId'] = recursive_get(registry, ['caches', 'spaces', BL_SPACE, 'users', assignee, 'id'])
 
     resource = request_post_backlog_resources('/api/v2/issues', method='POST', params=params)
     print(f'{resource['issueKey']} {resource['summary']}')
@@ -992,11 +992,11 @@ def do_update(args: argparse.Namespace):
     if issue_match is None:
         raise PreconditionError(f'issue format is invalid \'{issue}\'')
     project = issue_match.group(1)
-    project_id = recursive_get(registry, ['resources', 'spaces', BL_SPACE, 'projects', project, 'id'])
+    project_id = recursive_get(registry, ['caches', 'spaces', BL_SPACE, 'projects', project, 'id'])
     if project_id is None:
         raise PreconditionError(f'project not synced \'{project}\'')
 
-    resources = recursive_get(registry, ['resources', 'spaces', BL_SPACE, 'projects', project], {})
+    resources = recursive_get(registry, ['caches', 'spaces', BL_SPACE, 'projects', project], {})
 
     parent_issue = args.parent_issue
     summary = args.summary
@@ -1146,11 +1146,11 @@ def do_resource_sync(args: argparse.Namespace):
         raise PreconditionError('no input project')
 
     recursive_set_default(registry, ['defaults', 'spaces', BL_SPACE, 'projects', project], {})
-    recursive_set_default(registry, ['resources', 'spaces', BL_SPACE, 'users'], {})
-    recursive_set_default(registry, ['resources', 'spaces', BL_SPACE, 'projects', project], {})
+    recursive_set_default(registry, ['caches', 'spaces', BL_SPACE, 'users'], {})
+    recursive_set_default(registry, ['caches', 'spaces', BL_SPACE, 'projects', project], {})
     defaults = recursive_get(registry, ['defaults', 'spaces', BL_SPACE, 'projects', project], {})
-    users = recursive_get(registry, ['resources', 'spaces', BL_SPACE, 'users'], {})
-    resources = recursive_get(registry, ['resources', 'spaces', BL_SPACE, 'projects', project], {})
+    users = recursive_get(registry, ['caches', 'spaces', BL_SPACE, 'users'], {})
+    resources = recursive_get(registry, ['caches', 'spaces', BL_SPACE, 'projects', project], {})
 
     recursive_set_default(defaults, ['create', 'parentIssue'], None)
     recursive_set_default(defaults, ['create', 'startDate'], 'today')
@@ -1209,12 +1209,12 @@ def do_resource_list(args: argparse.Namespace):
         resource_names = list(VIRTUAL_RESOURCES[resource_type].keys())
     elif resource_type == 'spaces':
         registry = load_registry()
-        resource_names = recursive_get(registry, ['resources', 'spaces'], {}).keys()
+        resource_names = recursive_get(registry, ['caches', 'spaces'], {}).keys()
     elif resource_type == 'projects':
         if BL_SPACE is None:
             raise PreconditionError('BL_SPACE is not set')
         registry = load_registry()
-        resource_names = recursive_get(registry, ['resources', 'spaces', BL_SPACE, 'projects'], {}).keys()
+        resource_names = recursive_get(registry, ['caches', 'spaces', BL_SPACE, 'projects'], {}).keys()
     else:
         if BL_SPACE is None:
             raise PreconditionError('BL_SPACE is not set')
@@ -1222,7 +1222,7 @@ def do_resource_list(args: argparse.Namespace):
         if project is None:
             raise PreconditionError('no input project')
         registry = load_registry()
-        resources = recursive_get(registry, ['resources', 'spaces', BL_SPACE, 'projects', project, resource_type], {})
+        resources = recursive_get(registry, ['caches', 'spaces', BL_SPACE, 'projects', project, resource_type], {})
         resource_names = sorted(resources.keys(), key=lambda key: resources[key]['displayOrder'])
 
     for resource_name in resource_names:
