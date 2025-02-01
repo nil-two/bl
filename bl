@@ -33,7 +33,7 @@ commands:
   bl open           # open Backlog issue with web browser
   bl resource sync  # sync Backlog resources to caches
   bl resource list  # list Backlog resources from caches
-  bl configure      # edit config
+  bl configure      # edit config with text editor
   bl completion     # print evaluatable completion script
   bl help           # print usage and exit
 
@@ -61,9 +61,9 @@ options:
   -E, --estimated-hours=HOURS    issue estimated hours
   -A, --actual-hours=HOURS       issue actual hours
   -t, --issue-type=ISSUE_TYPE    issue type
-  -c, --category=CATEGORY        issue category
-  -v, --version=VERSION          issue version
-  -m, --milestone=MILESTONE      issue milestone
+  -c, --category=CATEGORY        issue categories
+  -v, --version=VERSION          issue versions
+  -m, --milestone=MILESTONE      issue milestones
   -P, --priority=PRIORITY        issue priority
   -h, --help                     print usage and exit
 '''.strip()
@@ -81,9 +81,9 @@ options:
   -E, --estimated-hours=HOURS    issue estimated hours
   -A, --actual-hours=HOURS       issue actual hours
   -t, --issue-type=ISSUE_TYPE    issue type
-  -c, --category=CATEGORY        issue category
-  -v, --version=VERSION          issue version
-  -m, --milestone=MILESTONE      issue milestone
+  -c, --category=CATEGORY        issue categories
+  -v, --version=VERSION          issue versions
+  -m, --milestone=MILESTONE      issue milestones
   -P, --priority=PRIORITY        issue priority
   -T, --status=STATUS            issue status
   -r, --resolution=RESOLUTION    issue resolution
@@ -138,7 +138,7 @@ resource-types:
 '''.strip()
 SUBCMD_USAGE['configure'] = '''
 usage: bl configure [<option(s)>]
-edit config.
+edit config with text editor.
 
 options:
   -h, --help  print usage and exit
@@ -512,7 +512,7 @@ _bl() {
     'show:show Backlog issue description'
     'open:open Backlog issue with web browser'
     'resource:handle Backlog resources'
-    'configure:edit config'
+    'configure:edit config with text editor'
     'completion:print evaluatable completion script'
     'help:print usage and exit'
   )
@@ -557,9 +557,9 @@ _bl() {
             '(-E --estimated-hours)'{-E,--estimated-hours}'[issue estimated hours]:estimated hours:' \\
             '(-A --actual-hours)'{-A,--actual-hours}'[issue actual hours]:estimated hours:' \\
             '(-t --issue-type)'{-t,--issue-type}'[issue type]:issue type:->issue_type' \\
-            '*'{-c,--category}'[issue category]:category:->category' \\
-            '*'{-v,--version}'[issue version]:version:->version' \\
-            '*'{-m,--milestone}'[issue milestone]:milestone:->milestone' \\
+            '*'{-c,--category}'[issue categories]:category:->category' \\
+            '*'{-v,--version}'[issue versions]:version:->version' \\
+            '*'{-m,--milestone}'[issue milestones]:milestone:->milestone' \\
             '(-P --priority)'{-P,--priority}'[issue priority]:priority:->priority' \\
             '(-h --help)'{-h,--help}'[print usage and exit]'
           case $state in
@@ -600,9 +600,9 @@ _bl() {
             '(-E --estimated-hours)'{-E,--estimated-hours}'[issue estimated hours]:estimated hours:' \\
             '(-A --actual-hours)'{-A,--actual-hours}'[issue actual hours]:estimated hours:' \\
             '(-t --issue-type)'{-t,--issue-type}'[issue type]:issue type:->issue_type' \\
-            '*'{-c,--category}'[issue category]:category:->category' \\
-            '*'{-v,--version}'[issue version]:version:->version' \\
-            '*'{-m,--milestone}'[issue milestone]:milestone:->milestone' \\
+            '*'{-c,--category}'[issue categories]:category:->category' \\
+            '*'{-v,--version}'[issue versions]:version:->version' \\
+            '*'{-m,--milestone}'[issue milestones]:milestone:->milestone' \\
             '(-P --priority)'{-P,--priority}'[issue priority]:priority:->priority' \\
             '(-T --status)'{-T,--status}'[issue status]:status:->status' \\
             '(-r --resolution)'{-r,--resolution}'[issue resolution]:resolution:->resolution' \\
@@ -753,9 +753,9 @@ complete -c bl -n '__fish_seen_subcommand_from create' -s D -l due-date -d 'Issu
 complete -c bl -n '__fish_seen_subcommand_from create' -s E -l estimated-hours -d 'Issue estimated hours'
 complete -c bl -n '__fish_seen_subcommand_from create' -s A -l actual-hours -d 'Issue actual hours'
 complete -c bl -n '__fish_seen_subcommand_from create' -s t -l issue-type -xa '(bl resource list issueTypes)' -d 'Issue type'
-complete -c bl -n '__fish_seen_subcommand_from create' -s c -l category -xa '(bl resource list categories)' -d 'Issue category'
-complete -c bl -n '__fish_seen_subcommand_from create' -s v -l version -xa '(bl resource list versions)' -d 'Issue version'
-complete -c bl -n '__fish_seen_subcommand_from create' -s m -l milestone -xa '(bl resource list versions)' -d 'Issue milestone'
+complete -c bl -n '__fish_seen_subcommand_from create' -s c -l category -xa '(bl resource list categories)' -d 'Issue categories'
+complete -c bl -n '__fish_seen_subcommand_from create' -s v -l version -xa '(bl resource list versions)' -d 'Issue versions'
+complete -c bl -n '__fish_seen_subcommand_from create' -s m -l milestone -xa '(bl resource list versions)' -d 'Issue milestones'
 complete -c bl -n '__fish_seen_subcommand_from create' -s P -l priority -xa '(bl resource list priorities)' -d 'Issue priority'
 complete -c bl -n '__fish_seen_subcommand_from create' -s h -l help -d 'Print usage and exit'
 complete -c bl -n '__fish_use_subcommand' -xa update -d 'Update Backlog issue'
@@ -768,9 +768,9 @@ complete -c bl -n '__fish_seen_subcommand_from update' -s D -l due-date -d 'Issu
 complete -c bl -n '__fish_seen_subcommand_from update' -s E -l estimated-hours -d 'Issue estimated hours'
 complete -c bl -n '__fish_seen_subcommand_from update' -s A -l actual-hours -d 'Issue actual hours'
 complete -c bl -n '__fish_seen_subcommand_from update' -s t -l issue-type -xa '(bl resource list issueTypes)' -d 'Issue type'
-complete -c bl -n '__fish_seen_subcommand_from update' -s c -l category -xa '(bl resource list categories)' -d 'Issue category'
-complete -c bl -n '__fish_seen_subcommand_from update' -s v -l version -xa '(bl resource list versions)' -d 'Issue version'
-complete -c bl -n '__fish_seen_subcommand_from update' -s m -l milestone -xa '(bl resource list versions)' -d 'Issue milestone'
+complete -c bl -n '__fish_seen_subcommand_from update' -s c -l category -xa '(bl resource list categories)' -d 'Issue categories'
+complete -c bl -n '__fish_seen_subcommand_from update' -s v -l version -xa '(bl resource list versions)' -d 'Issue versions'
+complete -c bl -n '__fish_seen_subcommand_from update' -s m -l milestone -xa '(bl resource list versions)' -d 'Issue milestones'
 complete -c bl -n '__fish_seen_subcommand_from update' -s P -l priority -xa '(bl resource list priorities)' -d 'Issue priority'
 complete -c bl -n '__fish_seen_subcommand_from update' -s T -l status -xa '(bl resource list statuses)' -d 'Issue status'
 complete -c bl -n '__fish_seen_subcommand_from update' -s r -l resolution -xa '(bl resource list resolutions)' -d 'Issue resolution'
@@ -789,7 +789,7 @@ complete -c bl -n '__fish_seen_subcommand_from resource; and not __fish_seen_sub
 complete -c bl -n '__fish_seen_subcommand_from resource; and __fish_seen_subcommand_from list' -s p -l project -xa '(bl resource list projects)' -d 'List resource caches of PROJECT'
 complete -c bl -n '__fish_seen_subcommand_from resource; and __fish_seen_subcommand_from list' -s h -l help -d 'Print usage and exit'
 complete -c bl -n '__fish_seen_subcommand_from resource; and __fish_seen_subcommand_from list' -xa 'spaces projects issueTypes categories versions priorities statuses resolutions' -d 'Resource type'
-complete -c bl -n '__fish_use_subcommand' -xa configure -d 'Edit config'
+complete -c bl -n '__fish_use_subcommand' -xa configure -d 'Edit config with text editor'
 complete -c bl -n '__fish_seen_subcommand_from completion' -s h -l help -d 'Print usage and exit'
 complete -c bl -n '__fish_use_subcommand' -xa completion -d 'Print evaluatable completion script'
 complete -c bl -n '__fish_seen_subcommand_from completion' -s h -l help -d 'Print usage and exit'

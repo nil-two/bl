@@ -7,7 +7,7 @@ _bl() {
     'show:show Backlog issue description'
     'open:open Backlog issue with web browser'
     'resource:handle Backlog resources'
-    'configure:edit config'
+    'configure:edit config with text editor'
     'completion:print evaluatable completion script'
     'help:print usage and exit'
   )
@@ -52,9 +52,9 @@ _bl() {
             '(-E --estimated-hours)'{-E,--estimated-hours}'[issue estimated hours]:estimated hours:' \
             '(-A --actual-hours)'{-A,--actual-hours}'[issue actual hours]:estimated hours:' \
             '(-t --issue-type)'{-t,--issue-type}'[issue type]:issue type:->issue_type' \
-            '*'{-c,--category}'[issue category]:category:->category' \
-            '*'{-v,--version}'[issue version]:version:->version' \
-            '*'{-m,--milestone}'[issue milestone]:milestone:->milestone' \
+            '*'{-c,--category}'[issue categories]:category:->category' \
+            '*'{-v,--version}'[issue versions]:version:->version' \
+            '*'{-m,--milestone}'[issue milestones]:milestone:->milestone' \
             '(-P --priority)'{-P,--priority}'[issue priority]:priority:->priority' \
             '(-h --help)'{-h,--help}'[print usage and exit]'
           case $state in
@@ -95,9 +95,9 @@ _bl() {
             '(-E --estimated-hours)'{-E,--estimated-hours}'[issue estimated hours]:estimated hours:' \
             '(-A --actual-hours)'{-A,--actual-hours}'[issue actual hours]:estimated hours:' \
             '(-t --issue-type)'{-t,--issue-type}'[issue type]:issue type:->issue_type' \
-            '*'{-c,--category}'[issue category]:category:->category' \
-            '*'{-v,--version}'[issue version]:version:->version' \
-            '*'{-m,--milestone}'[issue milestone]:milestone:->milestone' \
+            '*'{-c,--category}'[issue categories]:category:->category' \
+            '*'{-v,--version}'[issue versions]:version:->version' \
+            '*'{-m,--milestone}'[issue milestones]:milestone:->milestone' \
             '(-P --priority)'{-P,--priority}'[issue priority]:priority:->priority' \
             '(-T --status)'{-T,--status}'[issue status]:status:->status' \
             '(-r --resolution)'{-r,--resolution}'[issue resolution]:resolution:->resolution' \
