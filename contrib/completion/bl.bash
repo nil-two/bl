@@ -30,6 +30,8 @@ _bl() {
     --description=
     --start-date=
     --due-date=
+    --estimated-hours=
+    --actual-hours=
     --issue-type=
     --category=
     --version=
@@ -44,6 +46,8 @@ _bl() {
     --description=
     --start-date=
     --due-date=
+    --estimated-hours=
+    --actual-hours=
     --issue-type=
     --category=
     --version=

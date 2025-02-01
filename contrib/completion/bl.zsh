@@ -49,6 +49,8 @@ _bl() {
             '(-d --description)'{-d,--description}'[issue description]:description:' \
             '(-S --start-date)'{-S,--start-date}'[issue start date]:start date:' \
             '(-D --due-date)'{-D,--due-date}'[issue due date]:due date:' \
+            '(-E --estimated-hours)'{-E,--estimated-hours}'[issue estimated hours]:estimated hours:' \
+            '(-A --actual-hours)'{-A,--actual-hours}'[issue actual hours]:estimated hours:' \
             '(-t --issue-type)'{-t,--issue-type}'[issue type]:issue type:->issue_type' \
             '*'{-c,--category}'[issue category]:category:->category' \
             '*'{-v,--version}'[issue version]:version:->version' \
@@ -90,6 +92,8 @@ _bl() {
             '(-d --description)'{-d,--description}'[issue description]:description:' \
             '(-S --start-date)'{-S,--start-date}'[issue start date]:start date:' \
             '(-D --due-date)'{-D,--due-date}'[issue due date]:due date:' \
+            '(-E --estimated-hours)'{-E,--estimated-hours}'[issue estimated hours]:estimated hours:' \
+            '(-A --actual-hours)'{-A,--actual-hours}'[issue actual hours]:estimated hours:' \
             '(-t --issue-type)'{-t,--issue-type}'[issue type]:issue type:->issue_type' \
             '*'{-c,--category}'[issue category]:category:->category' \
             '*'{-v,--version}'[issue version]:version:->version' \

@@ -58,6 +58,8 @@ options:
   -d, --description=DESCRIPTION  issue description
   -S, --start-date=DATE          issue start date
   -D, --due-date=DATE            issue due date
+  -E, --estimated-hours=HOURS    issue estimated hours
+  -A, --actual-hours=HOURS       issue actual hours
   -t, --issue-type=ISSUE_TYPE    issue type
   -c, --category=CATEGORY        issue category
   -v, --version=VERSION          issue version
@@ -76,6 +78,8 @@ options:
   -d, --description=DESCRIPTION  issue description
   -S, --start-date=DATE          issue start date
   -D, --due-date=DATE            issue due date
+  -E, --estimated-hours=HOURS    issue estimated hours
+  -A, --actual-hours=HOURS       issue actual hours
   -t, --issue-type=ISSUE_TYPE    issue type
   -c, --category=CATEGORY        issue category
   -v, --version=VERSION          issue version
@@ -222,6 +226,8 @@ _bl() {
     --description=
     --start-date=
     --due-date=
+    --estimated-hours=
+    --actual-hours=
     --issue-type=
     --category=
     --version=
@@ -236,6 +242,8 @@ _bl() {
     --description=
     --start-date=
     --due-date=
+    --estimated-hours=
+    --actual-hours=
     --issue-type=
     --category=
     --version=
@@ -546,6 +554,8 @@ _bl() {
             '(-d --description)'{-d,--description}'[issue description]:description:' \\
             '(-S --start-date)'{-S,--start-date}'[issue start date]:start date:' \\
             '(-D --due-date)'{-D,--due-date}'[issue due date]:due date:' \\
+            '(-E --estimated-hours)'{-E,--estimated-hours}'[issue estimated hours]:estimated hours:' \\
+            '(-A --actual-hours)'{-A,--actual-hours}'[issue actual hours]:estimated hours:' \\
             '(-t --issue-type)'{-t,--issue-type}'[issue type]:issue type:->issue_type' \\
             '*'{-c,--category}'[issue category]:category:->category' \\
             '*'{-v,--version}'[issue version]:version:->version' \\
@@ -587,6 +597,8 @@ _bl() {
             '(-d --description)'{-d,--description}'[issue description]:description:' \\
             '(-S --start-date)'{-S,--start-date}'[issue start date]:start date:' \\
             '(-D --due-date)'{-D,--due-date}'[issue due date]:due date:' \\
+            '(-E --estimated-hours)'{-E,--estimated-hours}'[issue estimated hours]:estimated hours:' \\
+            '(-A --actual-hours)'{-A,--actual-hours}'[issue actual hours]:estimated hours:' \\
             '(-t --issue-type)'{-t,--issue-type}'[issue type]:issue type:->issue_type' \\
             '*'{-c,--category}'[issue category]:category:->category' \\
             '*'{-v,--version}'[issue version]:version:->version' \\
@@ -738,6 +750,8 @@ complete -c bl -n '__fish_seen_subcommand_from create' -s s -l summary -d 'Issue
 complete -c bl -n '__fish_seen_subcommand_from create' -s d -l description -d 'Issue description'
 complete -c bl -n '__fish_seen_subcommand_from create' -s S -l start-date -d 'Issue start date'
 complete -c bl -n '__fish_seen_subcommand_from create' -s D -l due-date -d 'Issue due date'
+complete -c bl -n '__fish_seen_subcommand_from create' -s E -l estimated-hours -d 'Issue estimated hours'
+complete -c bl -n '__fish_seen_subcommand_from create' -s A -l actual-hours -d 'Issue actual hours'
 complete -c bl -n '__fish_seen_subcommand_from create' -s t -l issue-type -xa '(bl resource list issueTypes)' -d 'Issue type'
 complete -c bl -n '__fish_seen_subcommand_from create' -s c -l category -xa '(bl resource list categories)' -d 'Issue category'
 complete -c bl -n '__fish_seen_subcommand_from create' -s v -l version -xa '(bl resource list versions)' -d 'Issue version'
@@ -751,6 +765,8 @@ complete -c bl -n '__fish_seen_subcommand_from update' -s s -l summary -d 'Issue
 complete -c bl -n '__fish_seen_subcommand_from update' -s d -l description -d 'Issue description'
 complete -c bl -n '__fish_seen_subcommand_from update' -s S -l start-date -d 'Issue start date'
 complete -c bl -n '__fish_seen_subcommand_from update' -s D -l due-date -d 'Issue due date'
+complete -c bl -n '__fish_seen_subcommand_from update' -s E -l estimated-hours -d 'Issue estimated hours'
+complete -c bl -n '__fish_seen_subcommand_from update' -s A -l actual-hours -d 'Issue actual hours'
 complete -c bl -n '__fish_seen_subcommand_from update' -s t -l issue-type -xa '(bl resource list issueTypes)' -d 'Issue type'
 complete -c bl -n '__fish_seen_subcommand_from update' -s c -l category -xa '(bl resource list categories)' -d 'Issue category'
 complete -c bl -n '__fish_seen_subcommand_from update' -s v -l version -xa '(bl resource list versions)' -d 'Issue version'
@@ -899,6 +915,8 @@ def do_create(args: argparse.Namespace):
     description = args.description
     start_date = args.start_date or defaults.get('startDate')
     due_date = args.due_date or defaults.get('dueDate')
+    estimated_hours = args.estimated_hours or defaults.get('estimatedHours')
+    actual_hours = args.actual_hours or defaults.get('actualHours')
     issue_type = args.issue_type or defaults.get('issueType')
     categories = args.categories or defaults.get('categories')
     versions = args.versions or defaults.get('versions')
@@ -937,6 +955,10 @@ def do_create(args: argparse.Namespace):
         params['startDate'] = today.strftime('%Y-%m-%d') if start_date == 'today' else start_date
     if due_date is not None and due_date != '':
         params['dueDate'] = today.strftime('%Y-%m-%d') if due_date == 'today' else due_date
+    if estimated_hours is not None and estimated_hours != '':
+        params['estimatedHours'] = estimated_hours
+    if actual_hours is not None and actual_hours != '':
+        params['actualHours'] = actual_hours
     if issue_type is not None and issue_type != '':
         params['issueTypeId'] = recursive_get(resources, ['issueTypes', issue_type, 'id'])
     if categories is not None and len(categories) != 0 and not (len(categories) == 1 and categories[0] == '') and len(categories) >= 1:
@@ -981,6 +1003,8 @@ def do_update(args: argparse.Namespace):
     description = args.description
     start_date = args.start_date
     due_date = args.due_date
+    estimated_hours = args.estimated_hours
+    actual_hours = args.actual_hours
     issue_type = args.issue_type
     categories = args.categories
     versions = args.versions
@@ -1022,6 +1046,10 @@ def do_update(args: argparse.Namespace):
         params['startDate'] = '' if start_date == '' else today.strftime('%Y-%m-%d') if start_date == 'today' else start_date
     if due_date is not None:
         params['dueDate'] = '' if due_date == '' else today.strftime('%Y-%m-%d') if due_date == 'today' else due_date
+    if estimated_hours is not None:
+        params['estimatedHours'] = estimated_hours
+    if actual_hours is not None:
+        params['actualHours'] = actual_hours
     if issue_type is not None:
         params['issueTypeId'] = '' if issue_type == '' else recursive_get(resources, ['issueTypes', issue_type, 'id'])
     if categories is not None:
@@ -1127,6 +1155,8 @@ def do_resource_sync(args: argparse.Namespace):
     recursive_set_default(defaults, ['create', 'parentIssue'], None)
     recursive_set_default(defaults, ['create', 'startDate'], 'today')
     recursive_set_default(defaults, ['create', 'dueDate'], 'today')
+    recursive_set_default(defaults, ['create', 'estimatedHours'], None)
+    recursive_set_default(defaults, ['create', 'actualHours'], None)
     recursive_set_default(defaults, ['create', 'issueType'], None)
     recursive_set_default(defaults, ['create', 'categories'], [])
     recursive_set_default(defaults, ['create', 'versions'], [])
@@ -1241,6 +1271,8 @@ def main():
     subparser_create.add_argument('-d', '--description', dest='description')
     subparser_create.add_argument('-S', '--start-date', dest='start_date')
     subparser_create.add_argument('-D', '--due-date', dest='due_date')
+    subparser_create.add_argument('-E', '--estimated-hours', dest='estimated_hours')
+    subparser_create.add_argument('-A', '--actual-hours', dest='actual_hours')
     subparser_create.add_argument('-t', '--issue-type', dest='issue_type')
     subparser_create.add_argument('-c', '--category', dest='categories', action='append')
     subparser_create.add_argument('-v', '--version', dest='versions', action='append')
@@ -1256,6 +1288,8 @@ def main():
     subparser_update.add_argument('-d', '--description', dest='description')
     subparser_update.add_argument('-S', '--start-date', dest='start_date')
     subparser_update.add_argument('-D', '--due-date', dest='due_date')
+    subparser_update.add_argument('-E', '--estimated-hours', dest='estimated_hours')
+    subparser_update.add_argument('-A', '--actual-hours', dest='actual_hours')
     subparser_update.add_argument('-t', '--issue-type', dest='issue_type')
     subparser_update.add_argument('-c', '--category', dest='categories', action='append')
     subparser_update.add_argument('-v', '--version', dest='versions', action='append')
