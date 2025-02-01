@@ -28,8 +28,8 @@ handle Backlog service.
 commands:
   bl create         # create Backlog issue
   bl update         # update Backlog issue
-  bl edit           # edit Backlog issue
-  bl show           # show Backlog issue
+  bl edit           # edit Backlog issue description with text editor
+  bl show           # show Backlog issue description
   bl open           # open Backlog issue with web browser
   bl resource sync  # sync Backlog resources to caches
   bl resource list  # list Backlog resources from caches
@@ -87,14 +87,14 @@ options:
 '''.strip()
 SUBCMD_USAGE['edit'] = '''
 usage: bl edit [<option(s)>] <issue>
-edit Backlog issue.
+edit Backlog issue description with text editor.
 
 options:
   -h, --help  print usage and exit
 '''.strip()
 SUBCMD_USAGE['show'] = '''
 usage: bl show [<option(s)>] <issue>
-show Backlog issue.
+show Backlog issue description.
 
 options:
   -h, --help  print usage and exit
@@ -500,8 +500,8 @@ _bl() {
   local commands=(
     'create:create Backlog issue'
     'update:update Backlog issue'
-    'edit:edit Backlog issue'
-    'show:show Backlog issue'
+    'edit:edit Backlog issue description with text editor'
+    'show:show Backlog issue description'
     'open:open Backlog issue with web browser'
     'resource:handle Backlog resources'
     'configure:edit config'
@@ -759,9 +759,9 @@ complete -c bl -n '__fish_seen_subcommand_from update' -s P -l priority -xa '(bl
 complete -c bl -n '__fish_seen_subcommand_from update' -s T -l status -xa '(bl resource list statuses)' -d 'Issue status'
 complete -c bl -n '__fish_seen_subcommand_from update' -s r -l resolution -xa '(bl resource list resolutions)' -d 'Issue resolution'
 complete -c bl -n '__fish_seen_subcommand_from update' -s h -l help -d 'Print usage and exit'
-complete -c bl -n '__fish_use_subcommand' -xa edit -d 'Edit Backlog issue'
+complete -c bl -n '__fish_use_subcommand' -xa edit -d 'Edit Backlog issue description with text editor'
 complete -c bl -n '__fish_seen_subcommand_from edit' -s h -l help -d 'Print usage and exit'
-complete -c bl -n '__fish_use_subcommand' -xa show -d 'Show Backlog issue'
+complete -c bl -n '__fish_use_subcommand' -xa show -d 'Show Backlog issue description'
 complete -c bl -n '__fish_seen_subcommand_from show' -s h -l help -d 'Print usage and exit'
 complete -c bl -n '__fish_use_subcommand' -xa open -d 'Open Backlog issue with web browser'
 complete -c bl -n '__fish_seen_subcommand_from open' -s h -l help -d 'Print usage and exit'

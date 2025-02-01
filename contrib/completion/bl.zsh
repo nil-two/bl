@@ -3,8 +3,8 @@ _bl() {
   local commands=(
     'create:create Backlog issue'
     'update:update Backlog issue'
-    'edit:edit Backlog issue'
-    'show:show Backlog issue'
+    'edit:edit Backlog issue description with text editor'
+    'show:show Backlog issue description'
     'open:open Backlog issue with web browser'
     'resource:handle Backlog resources'
     'configure:edit config'
