@@ -547,9 +547,9 @@ _bl() {
             '(-S --start-date)'{-S,--start-date}'[issue start date]:start date:' \\
             '(-D --due-date)'{-D,--due-date}'[issue due date]:due date:' \\
             '(-t --issue-type)'{-t,--issue-type}'[issue type]:issue type:->issue_type' \\
-            '(-c --category)'{-c,--category}'[issue category]:category:->category' \\
-            '(-v --version)'{-v,--version}'[issue version]:version:->version' \\
-            '(-m --milestone)'{-m,--milestone}'[issue milestone]:milestone:->milestone' \\
+            '*'{-c,--category}'[issue category]:category:->category' \\
+            '*'{-v,--version}'[issue version]:version:->version' \\
+            '*'{-m,--milestone}'[issue milestone]:milestone:->milestone' \\
             '(-P --priority)'{-P,--priority}'[issue priority]:priority:->priority' \\
             '(-h --help)'{-h,--help}'[print usage and exit]'
           case $state in
@@ -588,9 +588,9 @@ _bl() {
             '(-S --start-date)'{-S,--start-date}'[issue start date]:start date:' \\
             '(-D --due-date)'{-D,--due-date}'[issue due date]:due date:' \\
             '(-t --issue-type)'{-t,--issue-type}'[issue type]:issue type:->issue_type' \\
-            '(-c --category)'{-c,--category}'[issue category]:category:->category' \\
-            '(-v --version)'{-v,--version}'[issue version]:version:->version' \\
-            '(-m --milestone)'{-m,--milestone}'[issue milestone]:milestone:->milestone' \\
+            '*'{-c,--category}'[issue category]:category:->category' \\
+            '*'{-v,--version}'[issue version]:version:->version' \\
+            '*'{-m,--milestone}'[issue milestone]:milestone:->milestone' \\
             '(-P --priority)'{-P,--priority}'[issue priority]:priority:->priority' \\
             '(-T --status)'{-T,--status}'[issue status]:status:->status' \\
             '(-r --resolution)'{-r,--resolution}'[issue resolution]:resolution:->resolution' \\
