@@ -946,7 +946,7 @@ def do_create(args: argparse.Namespace):
     if project_id is not None and project_id != '':
         params['projectId'] = project_id
     if parent_issue is not None and parent_issue != '':
-        params['parentIssueId'] = request_get_backlog_resources(f'/api/v2/issues/{parent_issue}', delay_sec=1)['id']
+        params['parentIssueId'] = recursive_get(resources, ['issues', parent_issue, 'id']) or request_get_backlog_resources(f'/api/v2/issues/{parent_issue}', delay_sec=1)['id']
     if summary is not None and summary != '':
         params['summary'] = summary
     if description is not None and description != '' or description is None and recursive_get(resources, ['issueTypes', issue_type, 'templateDescription']) is not None:
@@ -974,6 +974,10 @@ def do_create(args: argparse.Namespace):
 
     resource = request_post_backlog_resources('/api/v2/issues', method='POST', params=params)
     print(f'{resource['issueKey']} {resource['summary']}')
+
+    if 'parentIssueId' in params and recursive_get(resources, ['issues', parent_issue, 'id']) is None:
+        recursive_set(resources, ['issues', parent_issue, 'id'], params['parentIssueId'])
+        save_registry(registry)
 
 
 def do_update(args: argparse.Namespace):
@@ -1037,7 +1041,7 @@ def do_update(args: argparse.Namespace):
 
     params = {}
     if parent_issue is not None:
-        params['parentIssueId'] = '' if parent_issue == '' else request_get_backlog_resources(f'/api/v2/issues/{parent_issue}', delay_sec=1)['id']
+        params['parentIssueId'] = '' if parent_issue == '' else (recursive_get(resources, ['issues', parent_issue, 'id']) or request_get_backlog_resources(f'/api/v2/issues/{parent_issue}', delay_sec=1)['id'])
     if summary is not None:
         params['summary'] = summary
     if description is not None:
@@ -1067,6 +1071,10 @@ def do_update(args: argparse.Namespace):
 
     resource = request_post_backlog_resources(f'/api/v2/issues/{issue}', method='PATCH', params=params)
     print(f'{resource['issueKey']} {resource['summary']}')
+
+    if 'parentIssueId' in params and recursive_get(resources, ['issues', parent_issue, 'id']) is None:
+        recursive_set(resources, ['issues', parent_issue, 'id'], params['parentIssueId'])
+        save_registry(registry)
 
 
 def do_edit(args: argparse.Namespace):
@@ -1172,6 +1180,7 @@ def do_resource_sync(args: argparse.Namespace):
     recursive_set(resources, ['categories'], {})
     recursive_set(resources, ['versions'], {})
     recursive_set(resources, ['statuses'], {})
+    recursive_set_default(resources, ['issues'], {})
     for resource in request_get_backlog_resources(f'/api/v2/projects/{project}/issueTypes', delay_sec=1):
         recursive_set(resources, ['issueTypes', resource['name']], {
             'id': resource['id'],
