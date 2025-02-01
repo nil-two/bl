@@ -1133,13 +1133,13 @@ def do_resource_sync(args: argparse.Namespace):
     resources = recursive_get(registry, ['resources', 'spaces', BL_SPACE, 'projects', project], {})
 
     recursive_set_default(defaults, ['create', 'parentIssue'], None)
-    recursive_set_default(defaults, ['create', 'startDate'], None)
-    recursive_set_default(defaults, ['create', 'dueDate'], None)
+    recursive_set_default(defaults, ['create', 'startDate'], 'today')
+    recursive_set_default(defaults, ['create', 'dueDate'], 'today')
     recursive_set_default(defaults, ['create', 'issueType'], None)
     recursive_set_default(defaults, ['create', 'category'], None)
     recursive_set_default(defaults, ['create', 'version'], None)
     recursive_set_default(defaults, ['create', 'milestone'], None)
-    recursive_set_default(defaults, ['create', 'priority'], None)
+    recursive_set_default(defaults, ['create', 'priority'], '中')
     if recursive_get(users, ['myself', 'id']) is None:
         resource = request_get_backlog_resources('/api/v2/users/myself', delay_sec=1)
         recursive_set(users, ['myself', 'id'], resource['id'])
