@@ -929,11 +929,11 @@ def do_create(args: argparse.Namespace):
         raise PreconditionError('no input issue type')
     if not (issue_type is None or issue_type == '') and recursive_get(resources, ['issueTypes', issue_type, 'id']) is None:
         raise PreconditionError(f'unrecognized issue type \'{issue_type}\'')
-    if not (categories is None or len(categories) == 0 or (len(categories) == 1 and categories[0] == '')) and any([recursive_get(resources, ['categories', c, 'id']) is None for c in categories]):
+    if not (categories is None or categories == [] or categories == ['']) and any([recursive_get(resources, ['categories', c, 'id']) is None for c in categories]):
         raise PreconditionError('unrecognized category %s' % ', '.join([f'\'{c}\'' for c in categories if recursive_get(resources, ['categories', c, 'id']) is None]))
-    if not (versions is None or len(versions) == 0 or (len(versions) == 1 and versions[0] == '')) and any([recursive_get(resources, ['versions', v, 'id']) is None for v in versions]):
+    if not (versions is None or versions == [] or versions == ['']) and any([recursive_get(resources, ['versions', v, 'id']) is None for v in versions]):
         raise PreconditionError('unrecognized version %s' % ', '.join([f'\'{v}\'' for v in versions if recursive_get(resources, ['versions', v, 'id']) is None]))
-    if not (milestones is None or len(milestones) == 0 or (len(milestones) == 1 and milestones[0] == '')) and any([recursive_get(resources, ['versions', m, 'id']) is None for m in milestones]):
+    if not (milestones is None or milestones == [] or milestones == ['']) and any([recursive_get(resources, ['versions', m, 'id']) is None for m in milestones]):
         raise PreconditionError('unrecognized milestone %s' % ', '.join([f'\'{m}\'' for m in milestones if recursive_get(resources, ['versions', m, 'id']) is None]))
     if priority is None or priority == '':
         raise PreconditionError('no input priority')
@@ -961,11 +961,11 @@ def do_create(args: argparse.Namespace):
         params['actualHours'] = actual_hours
     if issue_type is not None and issue_type != '':
         params['issueTypeId'] = recursive_get(resources, ['issueTypes', issue_type, 'id'])
-    if categories is not None and len(categories) != 0 and not (len(categories) == 1 and categories[0] == '') and len(categories) >= 1:
+    if categories is not None and categories != [] and categories != [''] and len(categories) >= 1:
         params['categoryId[]'] = [recursive_get(resources, ['categories', c, 'id']) for c in categories]
-    if versions is not None and len(versions) != 0 and not (len(versions) == 1 and versions[0] == '') and len(versions) >= 1:
+    if versions is not None and versions != [] and versions != [''] and len(versions) >= 1:
         params['versionId[]'] = [recursive_get(resources, ['versions', v, 'id']) for v in versions]
-    if milestones is not None and len(milestones) != 0 and not (len(milestones) == 1 and milestones[0] == '') and len(milestones) >= 1:
+    if milestones is not None and milestones != [] and milestones != [''] and len(milestones) >= 1:
         params['milestoneId[]'] = [recursive_get(resources, ['versions', m, 'id']) for m in milestones]
     if priority is not None and priority != '':
         params['priorityId'] = recursive_get(VIRTUAL_RESOURCES, ['priorities', priority, 'id'])
@@ -1022,11 +1022,11 @@ def do_update(args: argparse.Namespace):
         raise PreconditionError('issue type cannot be unset')
     if not (issue_type is None or issue_type == '') and recursive_get(resources, ['issueTypes', issue_type, 'id']) is None:
         raise PreconditionError(f'unrecognized issue type \'{issue_type}\'')
-    if not (categories is None or len(categories) == 0 or (len(categories) == 1 and categories[0] == '')) and any([recursive_get(resources, ['categories', c, 'id']) is None for c in categories]):
+    if not (categories is None or categories == [] or categories == ['']) and any([recursive_get(resources, ['categories', c, 'id']) is None for c in categories]):
         raise PreconditionError('unrecognized category %s' % ', '.join([f'\'{c}\'' for c in categories if recursive_get(resources, ['categories', c, 'id']) is None]))
-    if not (versions is None or len(versions) == 0 or (len(versions) == 1 and versions[0] == '')) and any([recursive_get(resources, ['versions', v, 'id']) is None for v in versions]):
+    if not (versions is None or versions == [] or versions == ['']) and any([recursive_get(resources, ['versions', v, 'id']) is None for v in versions]):
         raise PreconditionError('unrecognized version %s' % ', '.join([f'\'{v}\'' for v in versions if recursive_get(resources, ['versions', v, 'id']) is None]))
-    if not (milestones is None or len(milestones) == 0 or (len(milestones) == 1 and milestones[0] == '')) and any([recursive_get(resources, ['versions', m, 'id']) is None for m in milestones]):
+    if not (milestones is None or milestones == [] or milestones == ['']) and any([recursive_get(resources, ['versions', m, 'id']) is None for m in milestones]):
         raise PreconditionError('unrecognized milestone %s' % ', '.join([f'\'{m}\'' for m in milestones if recursive_get(resources, ['versions', m, 'id']) is None]))
     if priority == '':
         raise PreconditionError('priority cannot be unset')
@@ -1057,11 +1057,11 @@ def do_update(args: argparse.Namespace):
     if issue_type is not None:
         params['issueTypeId'] = '' if issue_type == '' else recursive_get(resources, ['issueTypes', issue_type, 'id'])
     if categories is not None:
-        params['categoryId[]'] = '' if len(categories) == 1 and categories[0] == '' else [recursive_get(resources, ['categories', c, 'id']) for c in categories]
+        params['categoryId[]'] = '' if categories == [''] else [recursive_get(resources, ['categories', c, 'id']) for c in categories]
     if versions is not None:
-        params['versionId[]'] = '' if len(versions) == 1 and versions[0] == '' else [recursive_get(resources, ['versions', v, 'id']) for v in versions]
+        params['versionId[]'] = '' if versions == [''] else [recursive_get(resources, ['versions', v, 'id']) for v in versions]
     if milestones is not None:
-        params['milestoneId[]'] = '' if len(milestones) == 1 and milestones[0] == '' else [recursive_get(resources, ['versions', m, 'id']) for m in milestones]
+        params['milestoneId[]'] = '' if milestones == [''] else [recursive_get(resources, ['versions', m, 'id']) for m in milestones]
     if priority is not None:
         params['priorityId'] = '' if priority == '' else recursive_get(VIRTUAL_RESOURCES, ['priorities', priority, 'id'])
     if status is not None:
