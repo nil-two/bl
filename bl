@@ -23,7 +23,7 @@ BL_REGISTRY = os.getenv('BL_REGISTRY', os.path.join(os.getenv('XDG_CONFIG_HOME',
 CMD_NAME = 'bl'
 CMD_USAGE = '''
 usage: bl [<option(s)>] <command> [...]
-handle Backlog service.
+handle Backlog issues.
 
 commands:
   bl create         # create Backlog issue
