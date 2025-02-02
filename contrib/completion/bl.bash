@@ -37,6 +37,7 @@ _bl() {
     --version=
     --milestone=
     --priority=
+    --assignee=
     --help
   )
   local update_options=(
@@ -55,6 +56,7 @@ _bl() {
     --priority=
     --status=
     --resolution=
+    --assignee=
     --help
   )
   local edit_options=(
@@ -85,6 +87,7 @@ _bl() {
   )
   local resource_types=(
     spaces
+    users
     projects
     issueTypes
     categories
@@ -140,6 +143,10 @@ _bl() {
                 IFS=$'\n'; COMPREPLY=( $(compgen -W '$(bl resource list priorities)' -- "$cur") ); IFS=$defaultIFS
                 break
                 ;;
+              -a|--assignee)
+                IFS=$'\n'; COMPREPLY=( $(compgen -W '$(bl resource list users)' -- "$cur") ); IFS=$defaultIFS
+                break
+                ;;
             esac
             $split && break
             case $cur in
@@ -176,6 +183,10 @@ _bl() {
                 ;;
               -r|--resolution)
                 IFS=$'\n'; COMPREPLY=( $(compgen -W '$(bl resource list resolutions)' -- "$cur") ); IFS=$defaultIFS
+                break
+                ;;
+              -a|--assignee)
+                IFS=$'\n'; COMPREPLY=( $(compgen -W '$(bl resource list users)' -- "$cur") ); IFS=$defaultIFS
                 break
                 ;;
             esac

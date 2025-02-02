@@ -65,6 +65,7 @@ options:
   -v, --version=VERSION          issue versions
   -m, --milestone=MILESTONE      issue milestones
   -P, --priority=PRIORITY        issue priority
+  -a, --assignee=ASSIGNEE        issue assignee
   -h, --help                     print usage and exit
 '''.strip()
 SUBCMD_USAGE['update'] = '''
@@ -87,6 +88,7 @@ options:
   -P, --priority=PRIORITY        issue priority
   -T, --status=STATUS            issue status
   -r, --resolution=RESOLUTION    issue resolution
+  -a, --assignee=ASSIGNEE        issue assignee
   -h, --help                     print usage and exit
 '''.strip()
 SUBCMD_USAGE['edit'] = '''
@@ -128,6 +130,7 @@ options:
 
 resource-types:
   spaces
+  users
   projects
   issueTypes
   categories
@@ -169,6 +172,7 @@ OPEN_COMMANDS = [
 ]
 RESOURCE_TYPES = [
     'spaces',
+    'users',
     'projects',
     'issueTypes',
     'categories',
@@ -233,6 +237,7 @@ _bl() {
     --version=
     --milestone=
     --priority=
+    --assignee=
     --help
   )
   local update_options=(
@@ -251,6 +256,7 @@ _bl() {
     --priority=
     --status=
     --resolution=
+    --assignee=
     --help
   )
   local edit_options=(
@@ -281,6 +287,7 @@ _bl() {
   )
   local resource_types=(
     spaces
+    users
     projects
     issueTypes
     categories
@@ -336,6 +343,10 @@ _bl() {
                 IFS=$'\\n'; COMPREPLY=( $(compgen -W '$(bl resource list priorities)' -- "$cur") ); IFS=$defaultIFS
                 break
                 ;;
+              -a|--assignee)
+                IFS=$'\\n'; COMPREPLY=( $(compgen -W '$(bl resource list users)' -- "$cur") ); IFS=$defaultIFS
+                break
+                ;;
             esac
             $split && break
             case $cur in
@@ -372,6 +383,10 @@ _bl() {
                 ;;
               -r|--resolution)
                 IFS=$'\\n'; COMPREPLY=( $(compgen -W '$(bl resource list resolutions)' -- "$cur") ); IFS=$defaultIFS
+                break
+                ;;
+              -a|--assignee)
+                IFS=$'\\n'; COMPREPLY=( $(compgen -W '$(bl resource list users)' -- "$cur") ); IFS=$defaultIFS
                 break
                 ;;
             esac
@@ -504,7 +519,7 @@ complete -F _bl bl
 # embed:start:completion:zsh:contrib/completion/bl.zsh
 SHELL_COMPLETION_SCRIPTS['zsh'] = '''
 _bl() {
-  local projects issue_types categories versions milestones priorities statuses resolutions
+  local users projects issue_types categories versions milestones priorities statuses resolutions
   local commands=(
     'create:create Backlog issue'
     'update:update Backlog issue'
@@ -522,6 +537,7 @@ _bl() {
   )
   local resource_types=(
     'spaces'
+    'users'
     'projects'
     'issueTypes'
     'categories'
@@ -561,8 +577,13 @@ _bl() {
             '*'{-v,--version}'[issue versions]:version:->version' \\
             '*'{-m,--milestone}'[issue milestones]:milestone:->milestone' \\
             '(-P --priority)'{-P,--priority}'[issue priority]:priority:->priority' \\
+            '(-a --assignee)'{-a,--assignee}'[issue assignee]:assignee:->user' \\
             '(-h --help)'{-h,--help}'[print usage and exit]'
           case $state in
+            user)
+              users=( ${(f)"$(bl resource list users)"} )
+              _describe -t 'users' 'user' users
+              ;;
             project)
               projects=( ${(f)"$(bl resource list projects)"} )
               _describe -t 'projects' 'project' projects
@@ -606,8 +627,13 @@ _bl() {
             '(-P --priority)'{-P,--priority}'[issue priority]:priority:->priority' \\
             '(-T --status)'{-T,--status}'[issue status]:status:->status' \\
             '(-r --resolution)'{-r,--resolution}'[issue resolution]:resolution:->resolution' \\
+            '(-a --assignee)'{-a,--assignee}'[issue assignee]:assignee:->user' \\
             '(-h --help)'{-h,--help}'[print usage and exit]'
           case $state in
+            user)
+              users=( ${(f)"$(bl resource list users)"} )
+              _describe -t 'users' 'user' users
+              ;;
             issue_type)
               issue_types=( ${(f)"$(bl resource list issueTypes)"} )
               _describe -t 'issue_types' 'issue type' issue_types
@@ -757,6 +783,7 @@ complete -c bl -n '__fish_seen_subcommand_from create' -s c -l category -xa '(bl
 complete -c bl -n '__fish_seen_subcommand_from create' -s v -l version -xa '(bl resource list versions)' -d 'Issue versions'
 complete -c bl -n '__fish_seen_subcommand_from create' -s m -l milestone -xa '(bl resource list versions)' -d 'Issue milestones'
 complete -c bl -n '__fish_seen_subcommand_from create' -s P -l priority -xa '(bl resource list priorities)' -d 'Issue priority'
+complete -c bl -n '__fish_seen_subcommand_from create' -s a -l assignee -xa '(bl resource list users)' -d 'Issue assignee'
 complete -c bl -n '__fish_seen_subcommand_from create' -s h -l help -d 'Print usage and exit'
 complete -c bl -n '__fish_use_subcommand' -xa update -d 'Update Backlog issue'
 complete -c bl -n '__fish_seen_subcommand_from update' -s i -l issue -d 'Update ISSUE'
@@ -774,6 +801,7 @@ complete -c bl -n '__fish_seen_subcommand_from update' -s m -l milestone -xa '(b
 complete -c bl -n '__fish_seen_subcommand_from update' -s P -l priority -xa '(bl resource list priorities)' -d 'Issue priority'
 complete -c bl -n '__fish_seen_subcommand_from update' -s T -l status -xa '(bl resource list statuses)' -d 'Issue status'
 complete -c bl -n '__fish_seen_subcommand_from update' -s r -l resolution -xa '(bl resource list resolutions)' -d 'Issue resolution'
+complete -c bl -n '__fish_seen_subcommand_from update' -s a -l assignee -xa '(bl resource list users)' -d 'Issue assignee'
 complete -c bl -n '__fish_seen_subcommand_from update' -s h -l help -d 'Print usage and exit'
 complete -c bl -n '__fish_use_subcommand' -xa edit -d 'Edit Backlog issue description with text editor'
 complete -c bl -n '__fish_seen_subcommand_from edit' -s h -l help -d 'Print usage and exit'
@@ -788,7 +816,7 @@ complete -c bl -n '__fish_seen_subcommand_from resource; and __fish_seen_subcomm
 complete -c bl -n '__fish_seen_subcommand_from resource; and not __fish_seen_subcommand_from sync list' -xa list -d 'List Backlog resources from caches'
 complete -c bl -n '__fish_seen_subcommand_from resource; and __fish_seen_subcommand_from list' -s p -l project -xa '(bl resource list projects)' -d 'List resource caches of PROJECT'
 complete -c bl -n '__fish_seen_subcommand_from resource; and __fish_seen_subcommand_from list' -s h -l help -d 'Print usage and exit'
-complete -c bl -n '__fish_seen_subcommand_from resource; and __fish_seen_subcommand_from list' -xa 'spaces projects issueTypes categories versions priorities statuses resolutions' -d 'Resource type'
+complete -c bl -n '__fish_seen_subcommand_from resource; and __fish_seen_subcommand_from list' -xa 'spaces users projects issueTypes categories versions priorities statuses resolutions' -d 'Resource type'
 complete -c bl -n '__fish_use_subcommand' -xa configure -d 'Edit config with text editor'
 complete -c bl -n '__fish_seen_subcommand_from completion' -s h -l help -d 'Print usage and exit'
 complete -c bl -n '__fish_use_subcommand' -xa completion -d 'Print evaluatable completion script'
@@ -908,6 +936,7 @@ def do_create(args: argparse.Namespace):
         raise PreconditionError(f'project not synced \'{project}\'')
 
     defaults = recursive_get(registry, ['defaults', 'spaces', BL_SPACE, 'projects', project, 'create'], {})
+    users = recursive_get(registry, ['caches', 'spaces', BL_SPACE, 'users'], {})
     resources = recursive_get(registry, ['caches', 'spaces', BL_SPACE, 'projects', project], {})
 
     parent_issue = '' if args.parent_issue == '' else args.parent_issue or defaults.get('parentIssue')
@@ -922,7 +951,7 @@ def do_create(args: argparse.Namespace):
     versions = [] if args.versions == [] else args.versions or defaults.get('versions')
     milestones = [] if args.milestones == [] else args.milestones or defaults.get('milestones')
     priority = '' if args.priority == '' else args.priority or defaults.get('priority')
-    assignee = 'myself'
+    assignee = '' if args.assignee == '' else args.assignee or defaults.get('assignee')
     if summary is None or summary == '':
         raise PreconditionError('no input summary')
     if issue_type is None or issue_type == '':
@@ -939,7 +968,7 @@ def do_create(args: argparse.Namespace):
         raise PreconditionError('no input priority')
     if not (priority is None or priority == '') and recursive_get(VIRTUAL_RESOURCES, ['priorities', priority, 'id']) is None:
         raise PreconditionError(f'unrecognized priority \'{priority}\'')
-    if not (assignee is None or assignee == '') and recursive_get(registry, ['caches', 'spaces', BL_SPACE, 'users', assignee, 'id']) is None:
+    if not (assignee is None or assignee == '') and recursive_get(users, [assignee, 'id']) is None:
         raise PreconditionError(f'unrecognized user \'{assignee}\'')
 
     params = {}
@@ -970,7 +999,7 @@ def do_create(args: argparse.Namespace):
     if priority is not None and priority != '':
         params['priorityId'] = recursive_get(VIRTUAL_RESOURCES, ['priorities', priority, 'id'])
     if assignee is not None and assignee != '':
-        params['assigneeId'] = recursive_get(registry, ['caches', 'spaces', BL_SPACE, 'users', assignee, 'id'])
+        params['assigneeId'] = recursive_get(users, [assignee, 'id'])
 
     resource = request_post_backlog_resources('/api/v2/issues', method='POST', params=params)
     print(f'{resource['issueKey']} {resource['summary']}')
@@ -1000,6 +1029,7 @@ def do_update(args: argparse.Namespace):
     if project_id is None:
         raise PreconditionError(f'project not synced \'{project}\'')
 
+    users = recursive_get(registry, ['caches', 'spaces', BL_SPACE, 'users'], {})
     resources = recursive_get(registry, ['caches', 'spaces', BL_SPACE, 'projects', project], {})
 
     parent_issue = args.parent_issue
@@ -1016,6 +1046,7 @@ def do_update(args: argparse.Namespace):
     priority = args.priority
     status = args.status
     resolution = args.resolution
+    assignee = args.assignee
     if summary == '':
         raise PreconditionError('summary cannot be unset')
     if issue_type == '':
@@ -1038,6 +1069,8 @@ def do_update(args: argparse.Namespace):
         raise PreconditionError(f'unrecognized status \'{status}\'')
     if not (resolution is None or resolution == '') and recursive_get(VIRTUAL_RESOURCES, ['resolutions', resolution, 'id']) is None:
         raise PreconditionError(f'unrecognized status \'{status}\'')
+    if not (assignee is None or assignee == '') and recursive_get(users, [assignee, 'id']) is None:
+        raise PreconditionError(f'unrecognized user \'{assignee}\'')
 
     params = {}
     if parent_issue is not None:
@@ -1068,6 +1101,8 @@ def do_update(args: argparse.Namespace):
         params['statusId'] = '' if status == '' else recursive_get(resources, ['statuses', status, 'id'])
     if resolution is not None:
         params['resolutionId'] = '' if resolution == '' else recursive_get(VIRTUAL_RESOURCES, ['resolutions', resolution, 'id'])
+    if assignee is not None:
+        params['assigneeId'] = '' if assignee == '' else recursive_get(users, [assignee, 'id'])
 
     resource = request_post_backlog_resources(f'/api/v2/issues/{issue}', method='PATCH', params=params)
     print(f'{resource['issueKey']} {resource['summary']}')
@@ -1170,6 +1205,7 @@ def do_resource_sync(args: argparse.Namespace):
     recursive_set_default(defaults, ['create', 'versions'], [])
     recursive_set_default(defaults, ['create', 'milestones'], [])
     recursive_set_default(defaults, ['create', 'priority'], '中')
+    recursive_set_default(defaults, ['create', 'assignee'], 'myself')
     if recursive_get(users, ['myself', 'id']) is None:
         resource = request_get_backlog_resources('/api/v2/users/myself', delay_sec=1)
         recursive_set(users, ['myself', 'id'], resource['id'])
@@ -1219,6 +1255,11 @@ def do_resource_list(args: argparse.Namespace):
     elif resource_type == 'spaces':
         registry = load_registry()
         resource_names = recursive_get(registry, ['caches', 'spaces'], {}).keys()
+    elif resource_type == 'users':
+        if BL_SPACE is None:
+            raise PreconditionError('BL_SPACE is not set')
+        registry = load_registry()
+        resource_names = recursive_get(registry, ['caches', 'spaces', BL_SPACE, 'users'], {}).keys()
     elif resource_type == 'projects':
         if BL_SPACE is None:
             raise PreconditionError('BL_SPACE is not set')
@@ -1287,6 +1328,7 @@ def main():
     subparser_create.add_argument('-v', '--version', dest='versions', action='append')
     subparser_create.add_argument('-m', '--milestone', dest='milestones', action='append')
     subparser_create.add_argument('-P', '--priority', dest='priority')
+    subparser_create.add_argument('-a', '--assignee', dest='assignee')
     subparser_create.add_argument('-h', '--help', dest='help', action='store_true')
     subparser_create.set_defaults(handler=do_create, command='create')
 
@@ -1306,6 +1348,7 @@ def main():
     subparser_update.add_argument('-P', '--priority', dest='priority')
     subparser_update.add_argument('-T', '--status', dest='status')
     subparser_update.add_argument('-r', '--resolution', dest='resolution')
+    subparser_update.add_argument('-a', '--assignee', dest='assignee')
     subparser_update.add_argument('-h', '--help', dest='help', action='store_true')
     subparser_update.set_defaults(handler=do_update, command='update')
 

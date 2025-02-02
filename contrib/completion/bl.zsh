@@ -1,5 +1,5 @@
 _bl() {
-  local projects issue_types categories versions milestones priorities statuses resolutions
+  local users projects issue_types categories versions milestones priorities statuses resolutions
   local commands=(
     'create:create Backlog issue'
     'update:update Backlog issue'
@@ -17,6 +17,7 @@ _bl() {
   )
   local resource_types=(
     'spaces'
+    'users'
     'projects'
     'issueTypes'
     'categories'
@@ -56,8 +57,13 @@ _bl() {
             '*'{-v,--version}'[issue versions]:version:->version' \
             '*'{-m,--milestone}'[issue milestones]:milestone:->milestone' \
             '(-P --priority)'{-P,--priority}'[issue priority]:priority:->priority' \
+            '(-a --assignee)'{-a,--assignee}'[issue assignee]:assignee:->user' \
             '(-h --help)'{-h,--help}'[print usage and exit]'
           case $state in
+            user)
+              users=( ${(f)"$(bl resource list users)"} )
+              _describe -t 'users' 'user' users
+              ;;
             project)
               projects=( ${(f)"$(bl resource list projects)"} )
               _describe -t 'projects' 'project' projects
@@ -101,8 +107,13 @@ _bl() {
             '(-P --priority)'{-P,--priority}'[issue priority]:priority:->priority' \
             '(-T --status)'{-T,--status}'[issue status]:status:->status' \
             '(-r --resolution)'{-r,--resolution}'[issue resolution]:resolution:->resolution' \
+            '(-a --assignee)'{-a,--assignee}'[issue assignee]:assignee:->user' \
             '(-h --help)'{-h,--help}'[print usage and exit]'
           case $state in
+            user)
+              users=( ${(f)"$(bl resource list users)"} )
+              _describe -t 'users' 'user' users
+              ;;
             issue_type)
               issue_types=( ${(f)"$(bl resource list issueTypes)"} )
               _describe -t 'issue_types' 'issue type' issue_types
