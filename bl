@@ -1255,7 +1255,7 @@ def do_create(args: argparse.Namespace):
     resource = request_post_backlog_resources('/api/v2/issues', method='POST', params=params)
     print(f'{resource['issueKey']} {resource['summary']}')
 
-    if 'parentIssueId' in params and recursive_get(resources, ['issues', parent_issue, 'id']) is None:
+    if parent_issue is not None and parent_issue != '' and 'parentIssueId' in params and recursive_get(resources, ['issues', parent_issue, 'id']) is None:
         recursive_set(resources, ['issues', parent_issue, 'id'], params['parentIssueId'])
         save_registry(registry)
 
@@ -1358,7 +1358,7 @@ def do_update(args: argparse.Namespace):
     resource = request_post_backlog_resources(f'/api/v2/issues/{issue}', method='PATCH', params=params)
     print(f'{resource['issueKey']} {resource['summary']}')
 
-    if 'parentIssueId' in params and recursive_get(resources, ['issues', parent_issue, 'id']) is None:
+    if parent_issue is not None and parent_issue != '' and 'parentIssueId' in params and recursive_get(resources, ['issues', parent_issue, 'id']) is None:
         recursive_set(resources, ['issues', parent_issue, 'id'], params['parentIssueId'])
         save_registry(registry)
 
