@@ -45,25 +45,21 @@ _bl() {
         create)
           _arguments -C -S -s \
             '(-p --project)'{-p,--project}'[create issue on PROJECT]:project:->project' \
-            '(-I --parent-issue)'{-I,--parent-issue}'[issue parent issue]:parent issue:' \
+            '(-I --parent-issue)'{-I,--parent-issue}'[issue parent issue]:issue:' \
             '(-s --summary)'{-s,--summary}'[issue summary]:summary:' \
             '(-d --description)'{-d,--description}'[issue description]:description:' \
-            '(-S --start-date)'{-S,--start-date}'[issue start date]:start date:' \
-            '(-D --due-date)'{-D,--due-date}'[issue due date]:due date:' \
-            '(-E --estimated-hours)'{-E,--estimated-hours}'[issue estimated hours]:estimated hours:' \
-            '(-A --actual-hours)'{-A,--actual-hours}'[issue actual hours]:estimated hours:' \
+            '(-S --start-date)'{-S,--start-date}'[issue start date]:date:' \
+            '(-D --due-date)'{-D,--due-date}'[issue due date]:date:' \
+            '(-E --estimated-hours)'{-E,--estimated-hours}'[issue estimated hours]:hours:' \
+            '(-A --actual-hours)'{-A,--actual-hours}'[issue actual hours]:hours:' \
             '(-t --issue-type)'{-t,--issue-type}'[issue type]:issue type:->issue_type' \
             '*'{-c,--category}'[issue categories]:category:->category' \
             '*'{-v,--version}'[issue versions]:version:->version' \
             '*'{-m,--milestone}'[issue milestones]:milestone:->milestone' \
             '(-P --priority)'{-P,--priority}'[issue priority]:priority:->priority' \
-            '(-a --assignee)'{-a,--assignee}'[issue assignee]:assignee:->user' \
+            '(-a --assignee)'{-a,--assignee}'[issue assignee]:user:->user' \
             '(-h --help)'{-h,--help}'[print usage and exit]'
           case $state in
-            user)
-              users=( ${(f)"$(bl resource list users)"} )
-              _describe -t 'users' 'user' users
-              ;;
             project)
               projects=( ${(f)"$(bl resource list projects)"} )
               _describe -t 'projects' 'project' projects
@@ -88,18 +84,22 @@ _bl() {
               priorities=( ${(f)"$(bl resource list priorities)"} )
               _describe -t 'priorities' 'priority' priorities
               ;;
+            user)
+              users=( ${(f)"$(bl resource list users)"} )
+              _describe -t 'users' 'user' users
+              ;;
           esac
           ;;
         update)
           _arguments -C -S -s \
             '(-i --issue)'{-i,--issue}'[update ISSUE]:issue:' \
-            '(-I --parent-issue)'{-I,--parent-issue}'[issue parent issue]:parent issue:' \
+            '(-I --parent-issue)'{-I,--parent-issue}'[issue parent issue]:issue:' \
             '(-s --summary)'{-s,--summary}'[issue summary]:summary:' \
             '(-d --description)'{-d,--description}'[issue description]:description:' \
-            '(-S --start-date)'{-S,--start-date}'[issue start date]:start date:' \
-            '(-D --due-date)'{-D,--due-date}'[issue due date]:due date:' \
-            '(-E --estimated-hours)'{-E,--estimated-hours}'[issue estimated hours]:estimated hours:' \
-            '(-A --actual-hours)'{-A,--actual-hours}'[issue actual hours]:estimated hours:' \
+            '(-S --start-date)'{-S,--start-date}'[issue start date]:date:' \
+            '(-D --due-date)'{-D,--due-date}'[issue due date]:date:' \
+            '(-E --estimated-hours)'{-E,--estimated-hours}'[issue estimated hours]:hours:' \
+            '(-A --actual-hours)'{-A,--actual-hours}'[issue actual hours]:hours:' \
             '(-t --issue-type)'{-t,--issue-type}'[issue type]:issue type:->issue_type' \
             '*'{-c,--category}'[issue categories]:category:->category' \
             '*'{-v,--version}'[issue versions]:version:->version' \
@@ -107,13 +107,9 @@ _bl() {
             '(-P --priority)'{-P,--priority}'[issue priority]:priority:->priority' \
             '(-T --status)'{-T,--status}'[issue status]:status:->status' \
             '(-r --resolution)'{-r,--resolution}'[issue resolution]:resolution:->resolution' \
-            '(-a --assignee)'{-a,--assignee}'[issue assignee]:assignee:->user' \
+            '(-a --assignee)'{-a,--assignee}'[issue assignee]:user:->user' \
             '(-h --help)'{-h,--help}'[print usage and exit]'
           case $state in
-            user)
-              users=( ${(f)"$(bl resource list users)"} )
-              _describe -t 'users' 'user' users
-              ;;
             issue_type)
               issue_types=( ${(f)"$(bl resource list issueTypes)"} )
               _describe -t 'issue_types' 'issue type' issue_types
@@ -141,6 +137,10 @@ _bl() {
             resolution)
               resolutions=( ${(f)"$(bl resource list resolutions)"} )
               _describe -t 'resolutions' 'resolution' resolutions
+              ;;
+            user)
+              users=( ${(f)"$(bl resource list users)"} )
+              _describe -t 'users' 'user' users
               ;;
           esac
           ;;
