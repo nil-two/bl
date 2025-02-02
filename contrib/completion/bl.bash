@@ -311,7 +311,7 @@ _bl() {
                 ;;
             esac
             ;;
-          show)
+          open)
             $split && break
             case $cur in
               -*)
