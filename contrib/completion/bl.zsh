@@ -3,9 +3,9 @@ _bl() {
   local commands=(
     'create:create Backlog issue'
     'update:update Backlog issue'
-    'edit:edit Backlog issue description with text editor'
     'list:list Backlog issues'
     'show:show Backlog issue description'
+    'edit:edit Backlog issue description with text editor'
     'open:open Backlog issue with web browser'
     'resource:handle Backlog resources'
     'configure:edit config with text editor'
@@ -170,11 +170,6 @@ _bl() {
               ;;
           esac
           ;;
-        edit)
-          _arguments -C -S -s \
-            '(-h --help)'{-h,--help}'[print usage and exit]' \
-            '1:issue:'
-          ;;
         list)
           _arguments -C -S -s \
             '(-p --project)'{-p,--project}'[create issue on PROJECT]:project:->project' \
@@ -235,6 +230,11 @@ _bl() {
           esac
           ;;
         show)
+          _arguments -C -S -s \
+            '(-h --help)'{-h,--help}'[print usage and exit]' \
+            '1:issue:'
+          ;;
+        edit)
           _arguments -C -S -s \
             '(-h --help)'{-h,--help}'[print usage and exit]' \
             '1:issue:'

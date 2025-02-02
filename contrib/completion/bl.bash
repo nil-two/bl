@@ -8,9 +8,9 @@ _bl() {
   local commands=(
     create
     update
-    edit
     list
     show
+    edit
     open
     resource
     configure
@@ -241,14 +241,6 @@ _bl() {
                 ;;
             esac
             ;;
-          edit)
-            $split && break
-            case $cur in
-              -*)
-                COMPREPLY=( $(compgen -W '"${edit_options[@]}"' -- "$cur") )
-                ;;
-            esac
-            ;;
           list)
             case $prev in
               -p|--project)
@@ -308,6 +300,14 @@ _bl() {
             case $cur in
               -*)
                 COMPREPLY=( $(compgen -W '"${show_options[@]}"' -- "$cur") )
+                ;;
+            esac
+            ;;
+          edit)
+            $split && break
+            case $cur in
+              -*)
+                COMPREPLY=( $(compgen -W '"${edit_options[@]}"' -- "$cur") )
                 ;;
             esac
             ;;
