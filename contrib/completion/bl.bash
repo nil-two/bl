@@ -9,6 +9,7 @@ _bl() {
     create
     update
     edit
+    list
     show
     open
     resource
@@ -62,6 +63,24 @@ _bl() {
   local edit_options=(
     --help
   )
+  local list_options=(
+    --project=
+    --parent-issue=
+    --issue-type=
+    --category=
+    --version=
+    --milestone=
+    --priority=
+    --status=
+    --resolution=
+    --assignee=
+    --keyword=
+    --sort=
+    --order=
+    --offset=
+    --count=
+    --help
+  )
   local show_options=(
     --help
   )
@@ -84,6 +103,31 @@ _bl() {
   )
   local help_options=(
     --help
+  )
+  local sort_fields=(
+    issueType
+    category
+    version
+    milestone
+    summary
+    status
+    priority
+    attachment
+    sharedFile
+    created
+    createdUser
+    updated
+    updatedUser
+    assignee
+    startDate
+    dueDate
+    estimatedHours
+    actualHours
+    childIssue
+  )
+  local sort_order=(
+    asc
+    desc
   )
   local resource_types=(
     spaces
@@ -202,6 +246,60 @@ _bl() {
             case $cur in
               -*)
                 COMPREPLY=( $(compgen -W '"${edit_options[@]}"' -- "$cur") )
+                ;;
+            esac
+            ;;
+          list)
+            case $prev in
+              -p|--project)
+                IFS=$'\n'; COMPREPLY=( $(compgen -W '$(bl resource list projects)' -- "$cur") ); IFS=$defaultIFS
+                break
+                ;;
+              -t|--issue-type)
+                IFS=$'\n'; COMPREPLY=( $(compgen -W '$(bl resource list issueTypes)' -- "$cur") ); IFS=$defaultIFS
+                break
+                ;;
+              -c|--category)
+                IFS=$'\n'; COMPREPLY=( $(compgen -W '$(bl resource list categories)' -- "$cur") ); IFS=$defaultIFS
+                break
+                ;;
+              -v|--version)
+                IFS=$'\n'; COMPREPLY=( $(compgen -W '$(bl resource list versions)' -- "$cur") ); IFS=$defaultIFS
+                break
+                ;;
+              -m|--milestone)
+                IFS=$'\n'; COMPREPLY=( $(compgen -W '$(bl resource list versions)' -- "$cur") ); IFS=$defaultIFS
+                break
+                ;;
+              -P|--priority)
+                IFS=$'\n'; COMPREPLY=( $(compgen -W '$(bl resource list priorities)' -- "$cur") ); IFS=$defaultIFS
+                break
+                ;;
+              -T|--status)
+                IFS=$'\n'; COMPREPLY=( $(compgen -W '$(bl resource list statuses)' -- "$cur") ); IFS=$defaultIFS
+                break
+                ;;
+              -r|--resolution)
+                IFS=$'\n'; COMPREPLY=( $(compgen -W '$(bl resource list resolutions)' -- "$cur") ); IFS=$defaultIFS
+                break
+                ;;
+              -a|--assignee)
+                IFS=$'\n'; COMPREPLY=( $(compgen -W '$(bl resource list users)' -- "$cur") ); IFS=$defaultIFS
+                break
+                ;;
+              -s|--sort)
+                COMPREPLY=( $(compgen -W '"${sort_fields[@]}"' -- "$cur") )
+                break
+                ;;
+              -o|--order)
+                COMPREPLY=( $(compgen -W '"${sort_order[@]}"' -- "$cur") )
+                break
+                ;;
+            esac
+            $split && break
+            case $cur in
+              -*)
+                COMPREPLY=( $(compgen -W '"${list_options[@]}"' -- "$cur") )
                 ;;
             esac
             ;;

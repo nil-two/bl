@@ -4,6 +4,7 @@ _bl() {
     'create:create Backlog issue'
     'update:update Backlog issue'
     'edit:edit Backlog issue description with text editor'
+    'list:list Backlog issues'
     'show:show Backlog issue description'
     'open:open Backlog issue with web browser'
     'resource:handle Backlog resources'
@@ -14,6 +15,31 @@ _bl() {
   local resource_commands=(
     'sync:sync Backlog resources to caches'
     'list:list Backlog resources from caches'
+  )
+  local sort_fields=(
+    'issueType'
+    'category'
+    'version'
+    'milestone'
+    'summary'
+    'status'
+    'priority'
+    'attachment'
+    'sharedFile'
+    'created'
+    'createdUser'
+    'updated'
+    'updatedUser'
+    'assignee'
+    'startDate'
+    'dueDate'
+    'estimatedHours'
+    'actualHours'
+    'childIssue'
+  )
+  local sort_orders=(
+    'asc'
+    'desc'
   )
   local resource_types=(
     'spaces'
@@ -148,6 +174,65 @@ _bl() {
           _arguments -C -S -s \
             '(-h --help)'{-h,--help}'[print usage and exit]' \
             '1:issue:'
+          ;;
+        list)
+          _arguments -C -S -s \
+            '(-p --project)'{-p,--project}'[create issue on PROJECT]:project:->project' \
+            '*'{-I,--parent-issue}'[issue parent issue]:issue:' \
+            '*'{-t,--issue-type}'[issue type]:issue type:->issue_type' \
+            '*'{-c,--category}'[issue categories]:category:->category' \
+            '*'{-v,--version}'[issue versions]:version:->version' \
+            '*'{-m,--milestone}'[issue milestones]:milestone:->milestone' \
+            '*'{-P,--priority}'[issue priority]:priority:->priority' \
+            '*'{-T,--status}'[issue status]:status:->status' \
+            '*'{-r,--resolution}'[issue resolution]:resolution:->resolution' \
+            '*'{-a,--assignee}'[issue assignee]:user:->user' \
+            '(-k --keyword)'{-k,--keyword}'[search by keyword]:keyword:' \
+            '(-s --sort)'{-s,--sort}'[sort issues by field]:sort field:->sort_field' \
+            '(-o --order)'{-o,--order}'[sort issues with asc or desc]:sort order:->sort_order' \
+            '(-O --offset)'{-O,--offset}'[search issues with offset]:offset:' \
+            '(-C --count)'{-C,--count}'[search issues with count]:count:' \
+            '(-h --help)'{-h,--help}'[print usage and exit]'
+          case $state in
+            issue_type)
+              issue_types=( ${(f)"$(bl resource list issueTypes)"} )
+              _describe -t 'issue_types' 'issue type' issue_types
+              ;;
+            category)
+              categories=( ${(f)"$(bl resource list categories)"} )
+              _describe -t 'categories' 'category' categories
+              ;;
+            version)
+              versions=( ${(f)"$(bl resource list versions)"} )
+              _describe -t 'versions' 'version' versions
+              ;;
+            milestone)
+              milestones=( ${(f)"$(bl resource list versions)"} )
+              _describe -t 'milestones' 'milestone' milestones
+              ;;
+            priority)
+              priorities=( ${(f)"$(bl resource list priorities)"} )
+              _describe -t 'priorities' 'priority' priorities
+              ;;
+            status)
+              statuses=( ${(f)"$(bl resource list statuses)"} )
+              _describe -t 'statuses' 'status' statuses
+              ;;
+            resolution)
+              resolutions=( ${(f)"$(bl resource list resolutions)"} )
+              _describe -t 'resolutions' 'resolution' resolutions
+              ;;
+            user)
+              users=( ${(f)"$(bl resource list users)"} )
+              _describe -t 'users' 'user' users
+              ;;
+            sort_field)
+              _describe -t 'sort_fields' 'sort field' sort_fields
+              ;;
+            sort_order)
+              _describe -t 'sort_orders' 'sort field' sort_orders
+              ;;
+          esac
           ;;
         show)
           _arguments -C -S -s \
