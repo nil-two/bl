@@ -1500,8 +1500,7 @@ def do_edit(args: argparse.Namespace):
         description = re.sub(r'\n\Z', '', pathlib.Path(fp.name).read_text())
         if description != resource['description']:
             request_post_backlog_resources(f'/api/v2/issues/{issue}', method='PATCH', params={'description': description})
-
-        print(f'{resource['issueKey']} {resource['summary']}')
+            print(f'{resource['issueKey']} {resource['summary']}')
 
 
 def do_open(args: argparse.Namespace):
