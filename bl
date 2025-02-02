@@ -900,7 +900,7 @@ def do_create(args: argparse.Namespace):
     today = datetime.datetime.today()
     registry = load_registry()
 
-    project = args.project or BL_PROJECT
+    project = None if args.project == '' else args.project or BL_PROJECT
     if project is None:
         raise PreconditionError('no input project')
     project_id = recursive_get(registry, ['caches', 'spaces', BL_SPACE, 'projects', project, 'id'])
@@ -910,18 +910,18 @@ def do_create(args: argparse.Namespace):
     defaults = recursive_get(registry, ['defaults', 'spaces', BL_SPACE, 'projects', project, 'create'], {})
     resources = recursive_get(registry, ['caches', 'spaces', BL_SPACE, 'projects', project], {})
 
-    parent_issue = args.parent_issue or defaults.get('parentIssue')
-    summary = args.summary
-    description = args.description
-    start_date = args.start_date or defaults.get('startDate')
-    due_date = args.due_date or defaults.get('dueDate')
-    estimated_hours = args.estimated_hours or defaults.get('estimatedHours')
-    actual_hours = args.actual_hours or defaults.get('actualHours')
-    issue_type = args.issue_type or defaults.get('issueType')
-    categories = args.categories or defaults.get('categories')
-    versions = args.versions or defaults.get('versions')
-    milestones = args.milestones or defaults.get('milestones')
-    priority = args.priority or defaults.get('priority')
+    parent_issue = '' if args.parent_issue == '' else args.parent_issue or defaults.get('parentIssue')
+    summary = '' if args.summary == '' else args.summary
+    description = '' if args.description == '' else args.description
+    start_date = '' if args.start_date == '' else args.start_date or defaults.get('startDate')
+    due_date = '' if args.due_date == '' else args.due_date or defaults.get('dueDate')
+    estimated_hours = '' if args.estimated_hours == '' else args.estimated_hours or defaults.get('estimatedHours')
+    actual_hours = '' if args.actual_hours == '' else args.actual_hours or defaults.get('actualHours')
+    issue_type = '' if args.issue_type == '' else args.issue_type or defaults.get('issueType')
+    categories = [] if args.categories == [] else args.categories or defaults.get('categories')
+    versions = [] if args.versions == [] else args.versions or defaults.get('versions')
+    milestones = [] if args.milestones == [] else args.milestones or defaults.get('milestones')
+    priority = '' if args.priority == '' else args.priority or defaults.get('priority')
     assignee = 'myself'
     if summary is None or summary == '':
         raise PreconditionError('no input summary')
@@ -1149,7 +1149,7 @@ def do_resource_sync(args: argparse.Namespace):
 
     registry = load_registry()
 
-    project = args.project or BL_PROJECT
+    project = None if args.project == '' else args.project or BL_PROJECT
     if project is None:
         raise PreconditionError('no input project')
 
@@ -1227,7 +1227,7 @@ def do_resource_list(args: argparse.Namespace):
     else:
         if BL_SPACE is None:
             raise PreconditionError('BL_SPACE is not set')
-        project = args.project or BL_PROJECT
+        project = None if args.project == '' else args.project or BL_PROJECT
         if project is None:
             raise PreconditionError('no input project')
         registry = load_registry()
